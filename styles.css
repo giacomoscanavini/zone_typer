@@ -1,0 +1,43 @@
+:root {
+  --bg: #071018;
+  --panel: #101d2a;
+  --text: #d8f6ff;
+  --muted: #8eb3c5;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  min-height: 100%;
+  background: radial-gradient(circle at top, #123047 0%, var(--bg) 55%);
+  color: var(--text);
+  font-family: Arial, Helvetica, sans-serif;
+}
+
+#game-shell {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  padding: 20px;
+}
+
+#game {
+  max-width: 100%;
+  border: 1px solid #2b647e;
+  background: #071018;
+  box-shadow: 0 0 28px rgba(33, 198, 255, 0.18);
+}
+
+#instructions {
+  width: min(960px, 100%);
+  padding: 12px 14px;
+  border: 1px solid #23495c;
+  background: rgba(16, 29, 42, 0.85);
+  color: var(--muted);
+  font-size: 14px;
+}
