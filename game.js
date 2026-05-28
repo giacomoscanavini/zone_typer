@@ -7,12 +7,13 @@ const WIDTH = canvas.width;
 const HEIGHT = canvas.height;
 
 const GAME = {
-  gridLeft: 210,
-  gridRight: 835,
+  gridLeft: 155,
+  gridRight: 730,
   gridTop: 105,
-  gridBottom: 565,
-  protectedZoneX: 850,
-  spawnX: 190,
+  gridBottom: 335,
+  laneHeight: 38,
+  protectedZoneX: 750,
+  spawnX: 135,
   maxLanes: 8,
   input: '',
   score: 0,
@@ -26,15 +27,29 @@ const GAME = {
   stageMessageTimer: 0,
   wrongSpeedTimer: 0,
   lastTime: 0,
+  screenShake: 0,
+  telemetry: null,
 };
 
-const WORDS = [
-  'arc', 'beam', 'bolt', 'core', 'dust', 'echo', 'flux', 'grid', 'halo',
-  'ion', 'laser', 'nova', 'pulse', 'quark', 'rift', 'spark', 'tower', 'unit',
-  'vector', 'wave', 'xenon', 'yield', 'zone', 'matrix', 'shield', 'plasma',
-  'signal', 'rocket', 'orbit', 'drone', 'reactor', 'magnet', 'photon', 'engine',
-  'binary', 'cipher', 'charge', 'meteor', 'tunnel', 'sensor'
-];
+const WORDS_BY_TIER = {
+  easy: [
+    'arc', 'beam', 'bolt', 'core', 'dust', 'echo', 'flux', 'grid',
+    'halo', 'ion', 'nova', 'rift', 'unit', 'wave', 'zone', 'spark'
+  ],
+  medium: [
+    'laser', 'pulse', 'quark', 'tower', 'vector', 'xenon', 'yield',
+    'matrix', 'shield', 'plasma', 'signal', 'rocket', 'orbit', 'drone'
+  ],
+  hard: [
+    'reactor', 'magnet', 'photon', 'engine', 'binary', 'cipher',
+    'charge', 'meteor', 'tunnel', 'sensor', 'crystal', 'fusion'
+  ],
+  expert: [
+    'cosmic', 'planet', 'quantum', 'gravity', 'neutron', 'satellite',
+    'asteroid', 'terminal', 'protocol', 'singularity', 'ionization',
+    'acceleration', 'transmission', 'containment'
+  ],
+};
 
 function clamp(value, min, max) {
   return Math.max(min, Math.min(max, value));
@@ -49,29 +64,104 @@ function laneCountForStage(stage) {
 }
 
 function monsterCountForStage(stage) {
-  return 6 + stage * 3;
+  return 7 + stage * 3;
 }
 
 function baseSpeedForStage(stage) {
-  return 26 + stage * 4;
+  return 24 + stage * 3.6;
 }
 
-function createLane(index, total) {
-  const laneHeight = (GAME.gridBottom - GAME.gridTop) / total;
+function createTelemetry() {
+  return {
+    startedAt: performance.now(),
+    keypresses: 0,
+    correctLetters: 0,
+    wrongLetters: 0,
+    wordsCompleted: 0,
+    monstersKilled: 0,
+    lasersFired: 0,
+    breachesByLane: Array(GAME.maxLanes).fill(0),
+    deathsByLane: Array(GAME.maxLanes).fill(0),
+    highestStage: 1,
+  };
+}
+
+function getAccuracy() {
+  const total = GAME.telemetry.correctLetters + GAME.telemetry.wrongLetters;
+  if (total === 0) {
+    return 100;
+  }
+  return Math.round((GAME.telemetry.correctLetters / total) * 100);
+}
+
+function getLaneDanger(laneIndex) {
+  const active = GAME.monsters.filter((monster) => monster.alive && monster.laneIndex === laneIndex);
+  if (active.length === 0) {
+    return 0;
+  }
+
+  const closest = active.reduce((best, monster) => Math.max(best, monster.x), GAME.spawnX);
+  const progress = (closest - GAME.spawnX) / (GAME.protectedZoneX - GAME.spawnX);
+  return clamp(progress, 0, 1);
+}
+
+function isWordTooSimilar(word, usedWords) {
+  return usedWords.some((used) => (
+    used === word || used.startsWith(word) || word.startsWith(used) || used[0] === word[0]
+  ));
+}
+
+function wordPoolForStage(stage) {
+  if (stage <= 2) {
+    return WORDS_BY_TIER.easy;
+  }
+
+  if (stage <= 4) {
+    return [...WORDS_BY_TIER.easy, ...WORDS_BY_TIER.medium];
+  }
+
+  if (stage <= 7) {
+    return [...WORDS_BY_TIER.medium, ...WORDS_BY_TIER.hard];
+  }
+
+  return [...WORDS_BY_TIER.hard, ...WORDS_BY_TIER.expert];
+}
+
+function pickLaneWord(usedWords = []) {
+  const pool = wordPoolForStage(GAME.stage);
+  const options = pool.filter((word) => !isWordTooSimilar(word, usedWords));
+  const fallback = pool.filter((word) => !usedWords.includes(word));
+  return randomChoice(options.length > 0 ? options : fallback.length > 0 ? fallback : pool);
+}
+
+function updateBoardLayout(laneCount) {
+  const boardHeight = GAME.laneHeight * laneCount;
+  GAME.gridTop = (HEIGHT - boardHeight) / 2;
+  GAME.gridBottom = GAME.gridTop + boardHeight;
+}
+
+function createLane(index, total, usedWords) {
+  const laneHeight = GAME.laneHeight;
   const y = GAME.gridTop + index * laneHeight + laneHeight / 2;
+  const word = pickLaneWord(usedWords);
+  usedWords.push(word);
 
   return {
     index,
     y,
     top: GAME.gridTop + index * laneHeight,
     bottom: GAME.gridTop + (index + 1) * laneHeight,
-    word: randomChoice(WORDS),
+    word,
+    flashTimer: 0,
+    wrongTimer: 0,
   };
 }
 
 function rebuildLanes() {
   const count = laneCountForStage(GAME.stage);
-  GAME.lanes = Array.from({ length: count }, (_, index) => createLane(index, count));
+  updateBoardLayout(count);
+  const usedWords = [];
+  GAME.lanes = Array.from({ length: count }, (_, index) => createLane(index, count, usedWords));
 }
 
 function startStage() {
@@ -82,18 +172,19 @@ function startStage() {
   GAME.input = '';
   GAME.gameOver = false;
   GAME.stageComplete = false;
-  GAME.stageMessageTimer = 1.4;
+  GAME.stageMessageTimer = 1.15;
+  GAME.telemetry.highestStage = Math.max(GAME.telemetry.highestStage, GAME.stage);
 
   const count = monsterCountForStage(GAME.stage);
   const speed = baseSpeedForStage(GAME.stage);
 
   for (let i = 0; i < count; i += 1) {
     const laneIndex = Math.floor(Math.random() * GAME.lanes.length);
-    const delay = i * Math.max(0.55, 1.25 - GAME.stage * 0.05) + Math.random() * 0.5;
+    const delay = i * Math.max(0.58, 1.30 - GAME.stage * 0.045) + Math.random() * 0.45;
 
     GAME.monsters.push({
       laneIndex,
-      x: GAME.spawnX - delay * speed * 1.8,
+      x: GAME.spawnX - delay * speed * 1.85,
       y: GAME.lanes[laneIndex].y,
       radius: 17,
       hp: 1,
@@ -108,11 +199,18 @@ function restartGame() {
   GAME.score = 0;
   GAME.stage = 1;
   GAME.wrongSpeedTimer = 0;
+  GAME.screenShake = 0;
+  GAME.telemetry = createTelemetry();
   startStage();
 }
 
 function findCompletedLane() {
   return GAME.lanes.find((lane) => lane.word === GAME.input.toLowerCase());
+}
+
+function replaceLaneWord(lane) {
+  const usedWords = GAME.lanes.filter((item) => item.index !== lane.index).map((item) => item.word);
+  lane.word = pickLaneWord(usedWords);
 }
 
 function fireLaser(lane) {
@@ -126,9 +224,14 @@ function fireLaser(lane) {
     laneIndex: lane.index,
     y: lane.y,
     x1: GAME.gridLeft,
-    x2: GAME.protectedZoneX,
+    x2: GAME.protectedZoneX - 4,
     ttl: 0.16,
   });
+
+  GAME.telemetry.lasersFired += 1;
+  GAME.telemetry.wordsCompleted += 1;
+  lane.flashTimer = 0.22;
+  GAME.screenShake = Math.max(GAME.screenShake, 2.5);
 
   if (target) {
     target.hp -= 1;
@@ -137,12 +240,28 @@ function fireLaser(lane) {
     if (target.hp <= 0) {
       target.alive = false;
       GAME.score += 100;
+      GAME.telemetry.monstersKilled += 1;
+      GAME.telemetry.deathsByLane[lane.index] += 1;
       GAME.floatingTexts.push({ text: '+100', x: target.x, y: target.y - 35, ttl: 0.7 });
     }
+  } else {
+    GAME.floatingTexts.push({ text: 'clear', x: GAME.gridLeft + 45, y: lane.y - 20, ttl: 0.55 });
   }
 
-  lane.word = randomChoice(WORDS);
+  replaceLaneWord(lane);
   GAME.input = '';
+}
+
+function markWrongInput() {
+  GAME.wrongSpeedTimer = 1.6;
+  GAME.screenShake = Math.max(GAME.screenShake, 4);
+  GAME.floatingTexts.push({ text: 'speed up!', x: WIDTH / 2 - 30, y: 78, ttl: 0.75 });
+
+  for (const lane of GAME.lanes) {
+    if (lane.word.startsWith(GAME.input)) {
+      lane.wrongTimer = 0.28;
+    }
+  }
 }
 
 function handleLetter(letter) {
@@ -152,13 +271,15 @@ function handleLetter(letter) {
 
   const candidate = (GAME.input + letter).toLowerCase();
   const hasPrefix = GAME.lanes.some((lane) => lane.word.startsWith(candidate));
+  GAME.telemetry.keypresses += 1;
 
   if (!hasPrefix) {
-    GAME.wrongSpeedTimer = 2.0;
-    GAME.floatingTexts.push({ text: 'speed up!', x: WIDTH / 2 - 30, y: 78, ttl: 0.9 });
+    GAME.telemetry.wrongLetters += 1;
+    markWrongInput();
     return;
   }
 
+  GAME.telemetry.correctLetters += 1;
   GAME.input = candidate;
   const completedLane = findCompletedLane();
 
@@ -184,7 +305,7 @@ window.addEventListener('keydown', (event) => {
   }
 });
 
-function update(dt) {
+function updateTimers(dt) {
   if (GAME.stageMessageTimer > 0) {
     GAME.stageMessageTimer -= dt;
   }
@@ -193,8 +314,21 @@ function update(dt) {
     GAME.wrongSpeedTimer -= dt;
   }
 
+  if (GAME.screenShake > 0) {
+    GAME.screenShake -= 12 * dt;
+  }
+
+  for (const lane of GAME.lanes) {
+    lane.flashTimer = Math.max(0, lane.flashTimer - dt);
+    lane.wrongTimer = Math.max(0, lane.wrongTimer - dt);
+  }
+}
+
+function update(dt) {
+  updateTimers(dt);
+
   if (!GAME.gameOver) {
-    const speedMultiplier = GAME.wrongSpeedTimer > 0 ? 1.55 : 1;
+    const speedMultiplier = GAME.wrongSpeedTimer > 0 ? 1.42 : 1;
 
     for (const monster of GAME.monsters) {
       if (!monster.alive) {
@@ -205,6 +339,7 @@ function update(dt) {
 
       if (monster.x + monster.radius >= GAME.protectedZoneX) {
         GAME.gameOver = true;
+        GAME.telemetry.breachesByLane[monster.laneIndex] += 1;
       }
     }
 
@@ -246,6 +381,18 @@ function drawGrid() {
   const cellCount = 8;
   const cellWidth = laneWidth / cellCount;
 
+  for (const lane of GAME.lanes) {
+    const danger = getLaneDanger(lane.index);
+    const flashAlpha = lane.flashTimer > 0 ? 0.14 : 0;
+    const warningAlpha = danger > 0.68 ? (danger - 0.68) * 0.7 : 0;
+
+    ctx.fillStyle = `rgba(93, 240, 255, ${flashAlpha})`;
+    ctx.fillRect(GAME.gridLeft, lane.top, laneWidth, lane.bottom - lane.top);
+
+    ctx.fillStyle = `rgba(255, 111, 145, ${warningAlpha})`;
+    ctx.fillRect(GAME.gridLeft, lane.top, laneWidth, lane.bottom - lane.top);
+  }
+
   for (let i = 0; i <= cellCount; i += 1) {
     const x = GAME.gridLeft + i * cellWidth;
     ctx.beginPath();
@@ -279,20 +426,28 @@ function drawWords() {
     const word = lane.word;
     const typed = GAME.input;
     const isTarget = word.startsWith(typed) && typed.length > 0;
+    const danger = getLaneDanger(lane.index);
+    const wordX = GAME.protectedZoneX + 62;
 
-    ctx.fillStyle = isTarget ? '#fff7a8' : '#d8f6ff';
-    drawText(word, 38, lane.y, 24, 'left');
+    if (isTarget) {
+      ctx.fillStyle = lane.wrongTimer > 0 ? 'rgba(255, 111, 145, 0.35)' : 'rgba(255, 247, 168, 0.16)';
+      ctx.fillRect(wordX - 8, lane.y - 20, WIDTH - wordX - 14, 40);
+    }
+
+    ctx.fillStyle = lane.wrongTimer > 0 ? '#ff8ca3' : isTarget ? '#fff7a8' : danger > 0.72 ? '#ffb6c4' : '#d8f6ff';
+    drawText(word, wordX, lane.y, 25, 'left');
 
     if (isTarget) {
       ctx.fillStyle = '#50e6ff';
-      drawText(typed, 38, lane.y, 24, 'left');
+      drawText(typed, wordX, lane.y, 25, 'left');
     }
   }
 }
 
 function drawMonsters() {
   for (const monster of GAME.monsters) {
-    ctx.fillStyle = '#ff6f91';
+    const danger = getLaneDanger(monster.laneIndex);
+    ctx.fillStyle = danger > 0.72 ? '#ff3f6c' : '#ff6f91';
     ctx.beginPath();
     ctx.arc(monster.x, monster.y, monster.radius, 0, Math.PI * 2);
     ctx.fill();
@@ -319,11 +474,21 @@ function drawLasers() {
 function drawHud() {
   ctx.fillStyle = '#d8f6ff';
   drawText(`Stage ${GAME.stage}`, 30, 35, 22);
-  drawText(`Score ${GAME.score}`, 170, 35, 22);
-  drawText(`Lanes ${GAME.lanes.length}`, 330, 35, 22);
+  drawText(`Score ${GAME.score}`, 155, 35, 22);
+  drawText(`Accuracy ${getAccuracy()}%`, 310, 35, 22);
+  drawText(`Kills ${GAME.telemetry.monstersKilled}`, 510, 35, 22);
 
-  ctx.fillStyle = GAME.wrongSpeedTimer > 0 ? '#ffb86b' : '#8eb3c5';
-  drawText(`Input: ${GAME.input || '...'}`, 30, 78, 18);
+  const inputY = Math.min(HEIGHT - 42, GAME.gridBottom + 42);
+  const inputText = `Input: ${GAME.input || '...'}`;
+
+  ctx.fillStyle = 'rgba(16, 29, 42, 0.82)';
+  ctx.fillRect(WIDTH / 2 - 185, inputY - 24, 370, 48);
+  ctx.strokeStyle = GAME.wrongSpeedTimer > 0 ? '#ffb86b' : '#2b647e';
+  ctx.lineWidth = 1;
+  ctx.strokeRect(WIDTH / 2 - 185, inputY - 24, 370, 48);
+
+  ctx.fillStyle = GAME.wrongSpeedTimer > 0 ? '#ffb86b' : '#d8f6ff';
+  drawText(inputText, WIDTH / 2, inputY, 26, 'center');
 }
 
 function drawFloatingTexts() {
@@ -338,7 +503,9 @@ function drawOverlay() {
     ctx.fillStyle = 'rgba(7, 16, 24, 0.55)';
     ctx.fillRect(0, 0, WIDTH, HEIGHT);
     ctx.fillStyle = '#d8f6ff';
-    drawText(`STAGE ${GAME.stage}`, WIDTH / 2, HEIGHT / 2, 42, 'center');
+    drawText(`STAGE ${GAME.stage}`, WIDTH / 2, HEIGHT / 2 - 18, 42, 'center');
+    ctx.fillStyle = '#8eb3c5';
+    drawText('protect the zone', WIDTH / 2, HEIGHT / 2 + 28, 22, 'center');
   }
 
   if (GAME.stageComplete) {
@@ -352,15 +519,20 @@ function drawOverlay() {
     ctx.fillStyle = 'rgba(7, 16, 24, 0.78)';
     ctx.fillRect(0, 0, WIDTH, HEIGHT);
     ctx.fillStyle = '#ff8ca3';
-    drawText('ZONE BREACHED', WIDTH / 2, HEIGHT / 2 - 32, 44, 'center');
+    drawText('ZONE BREACHED', WIDTH / 2, HEIGHT / 2 - 62, 44, 'center');
     ctx.fillStyle = '#d8f6ff';
-    drawText(`Final Score: ${GAME.score}`, WIDTH / 2, HEIGHT / 2 + 18, 24, 'center');
-    drawText('Press Enter to restart', WIDTH / 2, HEIGHT / 2 + 58, 20, 'center');
+    drawText(`Final Score: ${GAME.score}`, WIDTH / 2, HEIGHT / 2 - 14, 24, 'center');
+    drawText(`Stage: ${GAME.telemetry.highestStage}  Accuracy: ${getAccuracy()}%  Kills: ${GAME.telemetry.monstersKilled}`, WIDTH / 2, HEIGHT / 2 + 22, 20, 'center');
+    drawText('Press Enter to restart', WIDTH / 2, HEIGHT / 2 + 62, 20, 'center');
   }
 }
 
 function render() {
   ctx.clearRect(0, 0, WIDTH, HEIGHT);
+
+  const shake = Math.max(0, GAME.screenShake);
+  const offsetX = shake > 0 ? (Math.random() - 0.5) * shake : 0;
+  const offsetY = shake > 0 ? (Math.random() - 0.5) * shake : 0;
 
   const gradient = ctx.createLinearGradient(0, 0, WIDTH, HEIGHT);
   gradient.addColorStop(0, '#071018');
@@ -368,12 +540,16 @@ function render() {
   ctx.fillStyle = gradient;
   ctx.fillRect(0, 0, WIDTH, HEIGHT);
 
+  ctx.save();
+  ctx.translate(offsetX, offsetY);
   drawGrid();
   drawWords();
   drawLasers();
   drawMonsters();
-  drawHud();
   drawFloatingTexts();
+  ctx.restore();
+
+  drawHud();
   drawOverlay();
 }
 

@@ -4,119 +4,53 @@
 
 ### Core Concept
 
-Zone Typers is a browser-playable 2D lane-defense typing game.
+Zone Typers is a browser-playable 2D arcade-vibe lane-defense typing game
 
-The player protects a central zone while monsters advance through multiple lanes. Each lane has a word associated with it. Typing a lane’s word correctly fires attacks into that lane to eliminate incoming threats.
+The player protects a zone while monsters advance through multiple lanes. The player can shoot to kill monsters by typing correctly the word in each lane which will trigger a fire attack into that lnae
 
-The game escalates through:
-
+The game is divided into phases and includes the following escalating mechanics:
 * increasing enemy count
-* increasing speed
+* increasing enemy speed
 * new enemy behaviors
-* additional lanes
-* cognitive pressure
-* strategic power-ups
+* additional lanes spawn
+* additional cognitive pressure with increased number of items to track
+* strategic power-ups at the end of each phase
+* increased complexity of words to type
 
 The game only requires input from the keyboard
 
----
+### Core Design Pillars
 
-# Core Design Pillars
-
-## 1. Readability
-
-The player must always understand:
-
-* lane danger
-* active words
-* monster locations
-* incoming threats
-
-Readability takes priority over visual complexity.
-
----
-
-## 2. Tactical Typing
-
-Typing is not only execution.
-
-Players must decide:
-
+Players choices:
 * which lane to prioritize
-* whether to finish long words
-* whether to clear weak threats quickly
-* how to manage simultaneous danger
+* use of power-ups
 
----
+Random components: 
+* spawn location of monsters
+* words associated to a lane
 
-## 3. Escalating Cognitive Load
+### Why Playing this Game
 
-Difficulty should emerge from:
+By focusing on accuracy rather than speed the game allows to improve typing skills
 
-* more lanes
-* faster enemies
-* tougher enemies
-* simultaneous threats
-
-Not simply from impossible words.
-
----
-
-## 4. Satisfying Feedback
-
-Typing should feel powerful through:
-
-* lasers
-* hit effects
-* sounds
-* screen feedback
+The game comes with a rewarding aspects of dopamine:
+* lasers shooting
+* sounds effects
+* visual feedback
 * enemy destruction
+* game progression with complexity and challenges
 
----
+### Technical Stack
 
-# Technical Stack
+* Engine: Phaser.js
+* Platform: Browser
+* Rendering: HTML5 Canvas
+* Language: JavaScript
 
-## Engine
+### Version Numbering
 
-* Phaser.js
-
-## Platform
-
-* Browser
-
-## Rendering
-
-* HTML5 Canvas
-
-## Language
-
-* JavaScript
-
-## Deployment Targets
-
-* GitHub Pages
-* Netlify
-* Vercel
-
----
-
-# Project Structure
-
-```text
-src/
-├── scenes/
-├── systems/
-├── entities/
-├── ui/
-├── assets/
-│   ├── audio/
-│   ├── sprites/
-│   ├── fonts/
-│   └── shaders/
-├── data/
-├── utils/
-└── main.js
-```
+Big additions to the game features come in a new version that resets the second number vX.0
+Changes to current features come in a new version that increments the second nubmer v1.Y
 
 ---
 

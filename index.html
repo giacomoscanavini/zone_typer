@@ -1,23 +1,18 @@
 <!doctype html>
-<html lang="eng">
+<html lang="en">
 <head>
-    <!-- meta -->
-     <meta charset="utf-8" />
-     <meta name="viewport" content="width=device-width, initial-scale=1" />
-     <title>Zone Typer V1.0</title>
-    <!-- style -->
-    <link rel="stylesheet" href="styles.css" />
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Zone Typers V1.5</title>
+  <link rel="stylesheet" href="styles.css" />
 </head>
-
 <body>
-    <!-- content of the web page -->
-    <main id="game-shell">  
-        <canvas id="game" width="960" height="640"></canvas>
-        <section id="instructions">
-            <strong>Goal: </strong> Type words to shoot in a specific lane
-        </section>
-    </main>
-    <!-- game -->
-     <script srt="game.js"></script>
+  <main id="game-shell">
+    <canvas id="game" width="960" height="640" aria-label="Zone Typers game canvas"></canvas>
+    <section id="instructions">
+      <strong>Controls:</strong> type the word shown to the right of a lane to fire in that lane. Words get harder by stage. Backspace deletes. Enter restarts after game over.
+    </section>
+  </main>
+  <script src="game.js"></script>
 </body>
 </html>
