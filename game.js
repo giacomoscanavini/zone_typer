@@ -6,14 +6,26 @@ const ctx = canvas.getContext('2d');
 const WIDTH = canvas.width;
 const HEIGHT = canvas.height;
 
+const COMBO = {
+  maxLevel: 5,
+  thresholds: [0, 10, 18, 30, 46],
+  colors: {
+    1: '#aab7c4',
+    2: '#55e079',
+    3: '#50e6ff',
+    4: '#c084fc',
+    5: '#ffd166',
+  },
+};
+
 const GAME = {
-  gridLeft: 155,
-  gridRight: 730,
+  gridLeft: 44,
+  gridRight: 770,
   gridTop: 105,
   gridBottom: 335,
-  laneHeight: 38,
-  protectedZoneX: 750,
-  spawnX: 135,
+  laneHeight: 46,
+  protectedZoneX: 790,
+  spawnX: 58,
   maxLanes: 8,
   input: '',
   score: 0,
@@ -22,6 +34,7 @@ const GAME = {
   monsters: [],
   lasers: [],
   floatingTexts: [],
+  gameStarted: false,
   gameOver: false,
   stageComplete: false,
   stageMessageTimer: 0,
@@ -29,6 +42,11 @@ const GAME = {
   lastTime: 0,
   screenShake: 0,
   telemetry: null,
+  combo: {
+    level: 1,
+    xp: 0,
+    consecutiveErrors: 0,
+  },
 };
 
 const WORDS_BY_TIER = {
@@ -47,9 +65,50 @@ const WORDS_BY_TIER = {
   expert: [
     'cosmic', 'planet', 'quantum', 'gravity', 'neutron', 'satellite',
     'asteroid', 'terminal', 'protocol', 'singularity', 'ionization',
-    'acceleration', 'transmission', 'containment'
+    'acceleration', 'transmission', 'containment', 'synchronization'
   ],
 };
+
+const MONSTER_TYPES = {
+  basic: {
+    label: 'Basic',
+    hp: 1,
+    xp: 1,
+    radius: 15,
+    speedMultiplier: 1,
+    color: '#ff6f91',
+  },
+  runner: {
+    label: 'Runner',
+    hp: 1,
+    xp: 2,
+    radius: 12,
+    speedMultiplier: 1.45,
+    color: '#ffb86b',
+  },
+  tank: {
+    label: 'Shield',
+    hp: 2,
+    xp: 2,
+    radius: 17,
+    speedMultiplier: 1,
+    shieldSpeedMultiplier: 0.58,
+    color: '#9ae6b4',
+    shieldColor: '#7dd3fc',
+  },
+  elite: {
+    label: 'Elite',
+    hp: 3,
+    xp: 5,
+    radius: 18,
+    speedMultiplier: 0.82,
+    color: '#c084fc',
+  },
+};
+
+let audioCtx = null;
+let musicTimer = 0;
+let musicStep = 0;
 
 function clamp(value, min, max) {
   return Math.max(min, Math.min(max, value));
@@ -69,6 +128,21 @@ function monsterCountForStage(stage) {
 
 function baseSpeedForStage(stage) {
   return 24 + stage * 3.6;
+}
+
+function getComboThreshold() {
+  return COMBO.thresholds[GAME.combo.level] || 999999;
+}
+
+function comboColor() {
+  return COMBO.colors[GAME.combo.level];
+}
+
+function comboProgress() {
+  if (GAME.combo.level >= COMBO.maxLevel) {
+    return 1;
+  }
+  return clamp(GAME.combo.xp / getComboThreshold(), 0, 1);
 }
 
 function createTelemetry() {
@@ -95,7 +169,7 @@ function getAccuracy() {
 }
 
 function getLaneDanger(laneIndex) {
-  const active = GAME.monsters.filter((monster) => monster.alive && monster.laneIndex === laneIndex);
+  const active = GAME.monsters.filter((monster) => monster.alive && monster.active && monster.laneIndex === laneIndex);
   if (active.length === 0) {
     return 0;
   }
@@ -127,11 +201,34 @@ function wordPoolForStage(stage) {
   return [...WORDS_BY_TIER.hard, ...WORDS_BY_TIER.expert];
 }
 
-function pickLaneWord(usedWords = []) {
+function pickLaneWord(usedWords = [], blockedWords = []) {
   const pool = wordPoolForStage(GAME.stage);
-  const options = pool.filter((word) => !isWordTooSimilar(word, usedWords));
-  const fallback = pool.filter((word) => !usedWords.includes(word));
+  const blocked = new Set([...usedWords, ...blockedWords]);
+  const options = pool.filter((word) => !blocked.has(word) && !isWordTooSimilar(word, usedWords));
+  const fallback = pool.filter((word) => !blocked.has(word));
   return randomChoice(options.length > 0 ? options : fallback.length > 0 ? fallback : pool);
+}
+
+function pickMonsterType(stage) {
+  const roll = Math.random();
+
+  if (stage >= 8 && roll < 0.08) {
+    return 'elite';
+  }
+
+  if (stage >= 5 && roll < 0.24) {
+    return 'tank';
+  }
+
+  if (stage >= 3 && roll < 0.36) {
+    return 'runner';
+  }
+
+  if (stage >= 4 && roll < 0.48) {
+    return 'tank';
+  }
+
+  return 'basic';
 }
 
 function updateBoardLayout(laneCount) {
@@ -140,7 +237,7 @@ function updateBoardLayout(laneCount) {
   GAME.gridBottom = GAME.gridTop + boardHeight;
 }
 
-function createLane(index, total, usedWords) {
+function createLane(index, usedWords) {
   const laneHeight = GAME.laneHeight;
   const y = GAME.gridTop + index * laneHeight + laneHeight / 2;
   const word = pickLaneWord(usedWords);
@@ -152,6 +249,7 @@ function createLane(index, total, usedWords) {
     top: GAME.gridTop + index * laneHeight,
     bottom: GAME.gridTop + (index + 1) * laneHeight,
     word,
+    previousWord: null,
     flashTimer: 0,
     wrongTimer: 0,
   };
@@ -161,7 +259,26 @@ function rebuildLanes() {
   const count = laneCountForStage(GAME.stage);
   updateBoardLayout(count);
   const usedWords = [];
-  GAME.lanes = Array.from({ length: count }, (_, index) => createLane(index, count, usedWords));
+  GAME.lanes = Array.from({ length: count }, (_, index) => createLane(index, usedWords));
+}
+
+function createMonster(laneIndex, delay, speed) {
+  const typeKey = pickMonsterType(GAME.stage);
+  const type = MONSTER_TYPES[typeKey];
+  return {
+    typeKey,
+    type,
+    laneIndex,
+    x: GAME.spawnX,
+    y: GAME.lanes[laneIndex].y,
+    radius: type.radius,
+    hp: type.hp,
+    maxHp: type.hp,
+    speed,
+    spawnDelay: delay,
+    active: false,
+    alive: true,
+  };
 }
 
 function startStage() {
@@ -178,20 +295,19 @@ function startStage() {
   const count = monsterCountForStage(GAME.stage);
   const speed = baseSpeedForStage(GAME.stage);
 
-  for (let i = 0; i < count; i += 1) {
-    const laneIndex = Math.floor(Math.random() * GAME.lanes.length);
-    const delay = i * Math.max(0.58, 1.30 - GAME.stage * 0.045) + Math.random() * 0.45;
+  const laneLoad = Array(GAME.lanes.length).fill(0);
 
-    GAME.monsters.push({
-      laneIndex,
-      x: GAME.spawnX - delay * speed * 1.85,
-      y: GAME.lanes[laneIndex].y,
-      radius: 17,
-      hp: 1,
-      maxHp: 1,
-      speed,
-      alive: true,
-    });
+  for (let i = 0; i < count; i += 1) {
+    const minLoad = Math.min(...laneLoad);
+    const candidateLanes = laneLoad
+      .map((load, index) => ({ load, index }))
+      .filter((item) => item.load === minLoad)
+      .map((item) => item.index);
+    const laneIndex = randomChoice(candidateLanes);
+    laneLoad[laneIndex] += 1;
+
+    const delay = i * Math.max(0.46, 1.05 - GAME.stage * 0.035) + Math.random() * 0.28;
+    GAME.monsters.push(createMonster(laneIndex, delay, speed));
   }
 }
 
@@ -200,6 +316,7 @@ function restartGame() {
   GAME.stage = 1;
   GAME.wrongSpeedTimer = 0;
   GAME.screenShake = 0;
+  GAME.combo = { level: 1, xp: 0, consecutiveErrors: 0 };
   GAME.telemetry = createTelemetry();
   startStage();
 }
@@ -210,12 +327,119 @@ function findCompletedLane() {
 
 function replaceLaneWord(lane) {
   const usedWords = GAME.lanes.filter((item) => item.index !== lane.index).map((item) => item.word);
-  lane.word = pickLaneWord(usedWords);
+  const blockedWords = [lane.word, lane.previousWord].filter(Boolean);
+  lane.previousWord = lane.word;
+  lane.word = pickLaneWord(usedWords, blockedWords);
+}
+
+function ensureAudio() {
+  if (!audioCtx) {
+    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  }
+}
+
+function playTone(frequency, duration = 0.08, type = 'square', volume = 0.035) {
+  if (!audioCtx) {
+    return;
+  }
+
+  const osc = audioCtx.createOscillator();
+  const gain = audioCtx.createGain();
+  osc.type = type;
+  osc.frequency.value = frequency;
+  gain.gain.setValueAtTime(volume, audioCtx.currentTime);
+  gain.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + duration);
+  osc.connect(gain);
+  gain.connect(audioCtx.destination);
+  osc.start();
+  osc.stop(audioCtx.currentTime + duration);
+}
+
+function playLaserSound() {
+  playTone(660 + GAME.combo.level * 55, 0.075, 'sawtooth', 0.028);
+}
+
+function playDeathSound() {
+  playTone(130, 0.12, 'square', 0.04);
+  setTimeout(() => playTone(92, 0.08, 'square', 0.03), 45);
+}
+
+function playMultiplierSound() {
+  playTone(520, 0.06, 'triangle', 0.035);
+  setTimeout(() => playTone(720, 0.07, 'triangle', 0.035), 65);
+}
+
+function updateMusic(dt) {
+  if (!audioCtx || GAME.gameOver) {
+    return;
+  }
+
+  musicTimer -= dt;
+  if (musicTimer > 0) {
+    return;
+  }
+
+  const notes = [110, 146.8, 164.8, 220, 196, 164.8, 146.8, 123.5];
+  const note = notes[musicStep % notes.length] * (GAME.stage >= 5 ? 1.5 : 1);
+  playTone(note, 0.055, 'square', 0.012);
+  musicStep += 1;
+  musicTimer = 0.25;
+}
+
+function addComboXp(amount) {
+  if (GAME.combo.level >= COMBO.maxLevel) {
+    GAME.combo.xp = getComboThreshold();
+    return;
+  }
+
+  GAME.combo.xp += amount;
+  while (GAME.combo.level < COMBO.maxLevel && GAME.combo.xp >= getComboThreshold()) {
+    GAME.combo.xp -= getComboThreshold();
+    GAME.combo.level += 1;
+    GAME.floatingTexts.push({ text: `X${GAME.combo.level}`, x: WIDTH / 2, y: 86, ttl: 0.8 });
+    GAME.screenShake = Math.max(GAME.screenShake, 3.2);
+    playMultiplierSound();
+  }
+
+  if (GAME.combo.level >= COMBO.maxLevel) {
+    GAME.combo.xp = getComboThreshold();
+  }
+}
+
+function resetComboFully() {
+  GAME.combo.level = 1;
+  GAME.combo.xp = 0;
+  GAME.combo.consecutiveErrors = 0;
+  GAME.floatingTexts.push({ text: 'COMBO RESET', x: WIDTH / 2, y: 86, ttl: 0.75 });
+}
+
+function downgradeCombo() {
+  GAME.combo.level = Math.max(1, GAME.combo.level - 1);
+  GAME.combo.xp = 0;
+  GAME.floatingTexts.push({ text: `X${GAME.combo.level}`, x: WIDTH / 2, y: 86, ttl: 0.6 });
+}
+
+function recordInputSuccess() {
+  GAME.combo.consecutiveErrors = 0;
+}
+
+function recordInputError() {
+  GAME.combo.consecutiveErrors += 1;
+  if (GAME.combo.consecutiveErrors >= 2) {
+    resetComboFully();
+  } else {
+    downgradeCombo();
+  }
+}
+
+function scoreForKill(monster) {
+  return 100 * GAME.combo.level * monster.type.xp;
 }
 
 function fireLaser(lane) {
+  playLaserSound();
   const monstersInLane = GAME.monsters
-    .filter((monster) => monster.alive && monster.laneIndex === lane.index && monster.x < GAME.protectedZoneX)
+    .filter((monster) => monster.alive && monster.active && monster.laneIndex === lane.index && monster.x < GAME.protectedZoneX)
     .sort((a, b) => b.x - a.x);
 
   const target = monstersInLane[0];
@@ -226,6 +450,7 @@ function fireLaser(lane) {
     x1: GAME.gridLeft,
     x2: GAME.protectedZoneX - 4,
     ttl: 0.16,
+    color: comboColor(),
   });
 
   GAME.telemetry.lasersFired += 1;
@@ -238,11 +463,14 @@ function fireLaser(lane) {
     GAME.floatingTexts.push({ text: '-1', x: target.x, y: target.y - 18, ttl: 0.5 });
 
     if (target.hp <= 0) {
+      const gainedScore = scoreForKill(target);
       target.alive = false;
-      GAME.score += 100;
+      GAME.score += gainedScore;
       GAME.telemetry.monstersKilled += 1;
       GAME.telemetry.deathsByLane[lane.index] += 1;
-      GAME.floatingTexts.push({ text: '+100', x: target.x, y: target.y - 35, ttl: 0.7 });
+      GAME.floatingTexts.push({ text: `+${gainedScore}`, x: target.x, y: target.y - 35, ttl: 0.7 });
+      addComboXp(target.type.xp);
+      playDeathSound();
     }
   } else {
     GAME.floatingTexts.push({ text: 'clear', x: GAME.gridLeft + 45, y: lane.y - 20, ttl: 0.55 });
@@ -253,9 +481,11 @@ function fireLaser(lane) {
 }
 
 function markWrongInput() {
+  recordInputError();
   GAME.wrongSpeedTimer = 1.6;
   GAME.screenShake = Math.max(GAME.screenShake, 4);
-  GAME.floatingTexts.push({ text: 'speed up!', x: WIDTH / 2 - 30, y: 78, ttl: 0.75 });
+  GAME.floatingTexts.push({ text: 'speed up!', x: WIDTH / 2 - 30, y: 112, ttl: 0.75 });
+  playTone(78, 0.12, 'sawtooth', 0.035);
 
   for (const lane of GAME.lanes) {
     if (lane.word.startsWith(GAME.input)) {
@@ -265,7 +495,9 @@ function markWrongInput() {
 }
 
 function handleLetter(letter) {
-  if (GAME.gameOver) {
+  ensureAudio();
+
+  if (!GAME.gameStarted || GAME.gameOver) {
     return;
   }
 
@@ -280,7 +512,9 @@ function handleLetter(letter) {
   }
 
   GAME.telemetry.correctLetters += 1;
+  recordInputSuccess();
   GAME.input = candidate;
+  playTone(330, 0.025, 'square', 0.012);
   const completedLane = findCompletedLane();
 
   if (completedLane) {
@@ -289,8 +523,17 @@ function handleLetter(letter) {
 }
 
 window.addEventListener('keydown', (event) => {
+  ensureAudio();
+
+  if (event.key === 'Enter' && !GAME.gameStarted) {
+    GAME.gameStarted = true;
+    GAME.stageMessageTimer = 0.9;
+    return;
+  }
+
   if (event.key === 'Enter' && GAME.gameOver) {
     restartGame();
+    GAME.gameStarted = true;
     return;
   }
 
@@ -326,8 +569,9 @@ function updateTimers(dt) {
 
 function update(dt) {
   updateTimers(dt);
+  updateMusic(dt);
 
-  if (!GAME.gameOver) {
+  if (GAME.gameStarted && !GAME.gameOver) {
     const speedMultiplier = GAME.wrongSpeedTimer > 0 ? 1.42 : 1;
 
     for (const monster of GAME.monsters) {
@@ -335,7 +579,19 @@ function update(dt) {
         continue;
       }
 
-      monster.x += monster.speed * speedMultiplier * dt;
+      if (!monster.active) {
+        monster.spawnDelay -= dt;
+        if (monster.spawnDelay > 0) {
+          continue;
+        }
+        monster.active = true;
+        monster.x = GAME.spawnX;
+      }
+
+      const shieldPenalty = monster.typeKey === 'tank' && monster.hp === monster.maxHp
+        ? monster.type.shieldSpeedMultiplier
+        : monster.type.speedMultiplier;
+      monster.x += monster.speed * shieldPenalty * speedMultiplier * dt;
 
       if (monster.x + monster.radius >= GAME.protectedZoneX) {
         GAME.gameOver = true;
@@ -378,7 +634,7 @@ function drawGrid() {
   ctx.lineWidth = 1;
 
   const laneWidth = GAME.gridRight - GAME.gridLeft;
-  const cellCount = 8;
+  const cellCount = 10;
   const cellWidth = laneWidth / cellCount;
 
   for (const lane of GAME.lanes) {
@@ -415,10 +671,10 @@ function drawGrid() {
   ctx.stroke();
 
   ctx.fillStyle = 'rgba(31, 205, 255, 0.12)';
-  ctx.fillRect(GAME.protectedZoneX, GAME.gridTop, 46, GAME.gridBottom - GAME.gridTop);
+  ctx.fillRect(GAME.protectedZoneX, GAME.gridTop, 42, GAME.gridBottom - GAME.gridTop);
 
   ctx.fillStyle = '#d8f6ff';
-  drawText('ZONE', GAME.protectedZoneX + 23, GAME.gridTop - 20, 16, 'center');
+  drawText('ZONE', GAME.protectedZoneX + 21, GAME.gridTop - 20, 16, 'center');
 }
 
 function drawWords() {
@@ -427,7 +683,7 @@ function drawWords() {
     const typed = GAME.input;
     const isTarget = word.startsWith(typed) && typed.length > 0;
     const danger = getLaneDanger(lane.index);
-    const wordX = GAME.protectedZoneX + 62;
+    const wordX = GAME.protectedZoneX + 54;
 
     if (isTarget) {
       ctx.fillStyle = lane.wrongTimer > 0 ? 'rgba(255, 111, 145, 0.35)' : 'rgba(255, 247, 168, 0.16)';
@@ -447,28 +703,83 @@ function drawWords() {
 function drawMonsters() {
   for (const monster of GAME.monsters) {
     const danger = getLaneDanger(monster.laneIndex);
-    ctx.fillStyle = danger > 0.72 ? '#ff3f6c' : '#ff6f91';
-    ctx.beginPath();
-    ctx.arc(monster.x, monster.y, monster.radius, 0, Math.PI * 2);
-    ctx.fill();
+    ctx.fillStyle = danger > 0.72 ? '#ff3f6c' : monster.type.color;
+
+    if (!monster.active) {
+      continue;
+    }
+
+    if (monster.typeKey === 'runner') {
+      ctx.beginPath();
+      ctx.moveTo(monster.x + monster.radius, monster.y);
+      ctx.lineTo(monster.x - monster.radius, monster.y - monster.radius);
+      ctx.lineTo(monster.x - monster.radius, monster.y + monster.radius);
+      ctx.closePath();
+      ctx.fill();
+    } else {
+      ctx.beginPath();
+      ctx.arc(monster.x, monster.y, monster.radius, 0, Math.PI * 2);
+      ctx.fill();
+    }
+
+    if (monster.typeKey === 'tank' && monster.hp === monster.maxHp) {
+      ctx.strokeStyle = monster.type.shieldColor;
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      ctx.arc(monster.x, monster.y, monster.radius + 4, 0, Math.PI * 2);
+      ctx.stroke();
+    }
+
+    if (monster.typeKey === 'elite') {
+      ctx.strokeStyle = '#f0abfc';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.arc(monster.x, monster.y, monster.radius + 4, 0, Math.PI * 2);
+      ctx.stroke();
+    }
+
+    if (monster.hp > 1) {
+      ctx.fillStyle = '#071018';
+      drawText(String(monster.hp), monster.x, monster.y, 13, 'center');
+    }
 
     ctx.fillStyle = '#3b1020';
     ctx.beginPath();
-    ctx.arc(monster.x - 6, monster.y - 4, 3, 0, Math.PI * 2);
-    ctx.arc(monster.x + 6, monster.y - 4, 3, 0, Math.PI * 2);
+    ctx.arc(monster.x - 5, monster.y - 4, 2.5, 0, Math.PI * 2);
+    ctx.arc(monster.x + 5, monster.y - 4, 2.5, 0, Math.PI * 2);
     ctx.fill();
   }
 }
 
 function drawLasers() {
   for (const laser of GAME.lasers) {
-    ctx.strokeStyle = `rgba(93, 240, 255, ${laser.ttl / 0.16})`;
+    ctx.strokeStyle = laser.color;
+    ctx.globalAlpha = laser.ttl / 0.16;
     ctx.lineWidth = 5;
     ctx.beginPath();
     ctx.moveTo(laser.x1, laser.y);
     ctx.lineTo(laser.x2, laser.y);
     ctx.stroke();
+    ctx.globalAlpha = 1;
   }
+}
+
+function drawComboBar() {
+  const x = 330;
+  const y = 67;
+  const width = 300;
+  const height = 18;
+  const color = comboColor();
+
+  ctx.fillStyle = 'rgba(16, 29, 42, 0.88)';
+  ctx.fillRect(x, y, width, height);
+  ctx.strokeStyle = color;
+  ctx.lineWidth = 1;
+  ctx.strokeRect(x, y, width, height);
+  ctx.fillStyle = color;
+  ctx.fillRect(x, y, width * comboProgress(), height);
+  ctx.fillStyle = color;
+  drawText(`X${GAME.combo.level}`, x - 18, y + height / 2, 20, 'right');
 }
 
 function drawHud() {
@@ -477,18 +788,8 @@ function drawHud() {
   drawText(`Score ${GAME.score}`, 155, 35, 22);
   drawText(`Accuracy ${getAccuracy()}%`, 310, 35, 22);
   drawText(`Kills ${GAME.telemetry.monstersKilled}`, 510, 35, 22);
+  drawComboBar();
 
-  const inputY = Math.min(HEIGHT - 42, GAME.gridBottom + 42);
-  const inputText = `Input: ${GAME.input || '...'}`;
-
-  ctx.fillStyle = 'rgba(16, 29, 42, 0.82)';
-  ctx.fillRect(WIDTH / 2 - 185, inputY - 24, 370, 48);
-  ctx.strokeStyle = GAME.wrongSpeedTimer > 0 ? '#ffb86b' : '#2b647e';
-  ctx.lineWidth = 1;
-  ctx.strokeRect(WIDTH / 2 - 185, inputY - 24, 370, 48);
-
-  ctx.fillStyle = GAME.wrongSpeedTimer > 0 ? '#ffb86b' : '#d8f6ff';
-  drawText(inputText, WIDTH / 2, inputY, 26, 'center');
 }
 
 function drawFloatingTexts() {
@@ -499,6 +800,20 @@ function drawFloatingTexts() {
 }
 
 function drawOverlay() {
+  if (!GAME.gameStarted) {
+    ctx.fillStyle = 'rgba(7, 16, 24, 0.86)';
+    ctx.fillRect(0, 0, WIDTH, HEIGHT);
+    ctx.fillStyle = '#d8f6ff';
+    drawText('ZONE TYPERS', WIDTH / 2, 142, 46, 'center');
+    ctx.fillStyle = '#8eb3c5';
+    drawText('Type the word beside a lane to fire into that lane.', WIDTH / 2, 210, 22, 'center');
+    drawText('Stop monsters before they reach the protected zone.', WIDTH / 2, 246, 22, 'center');
+    drawText('Correct kills build the score multiplier. Two mistakes reset it.', WIDTH / 2, 282, 22, 'center');
+    ctx.fillStyle = '#fff7a8';
+    drawText('Press Enter to start', WIDTH / 2, 354, 26, 'center');
+    return;
+  }
+
   if (GAME.stageMessageTimer > 0) {
     ctx.fillStyle = 'rgba(7, 16, 24, 0.55)';
     ctx.fillRect(0, 0, WIDTH, HEIGHT);
@@ -516,14 +831,16 @@ function drawOverlay() {
   }
 
   if (GAME.gameOver) {
-    ctx.fillStyle = 'rgba(7, 16, 24, 0.78)';
+    ctx.fillStyle = 'rgba(7, 16, 24, 0.82)';
     ctx.fillRect(0, 0, WIDTH, HEIGHT);
     ctx.fillStyle = '#ff8ca3';
-    drawText('ZONE BREACHED', WIDTH / 2, HEIGHT / 2 - 62, 44, 'center');
+    drawText('ZONE BREACHED', WIDTH / 2, 98, 44, 'center');
     ctx.fillStyle = '#d8f6ff';
-    drawText(`Final Score: ${GAME.score}`, WIDTH / 2, HEIGHT / 2 - 14, 24, 'center');
-    drawText(`Stage: ${GAME.telemetry.highestStage}  Accuracy: ${getAccuracy()}%  Kills: ${GAME.telemetry.monstersKilled}`, WIDTH / 2, HEIGHT / 2 + 22, 20, 'center');
-    drawText('Press Enter to restart', WIDTH / 2, HEIGHT / 2 + 62, 20, 'center');
+    drawText(`Final Score: ${GAME.score}`, WIDTH / 2, 148, 24, 'center');
+    drawText(`Stage: ${GAME.telemetry.highestStage}  Accuracy: ${getAccuracy()}%  Kills: ${GAME.telemetry.monstersKilled}`, WIDTH / 2, 184, 20, 'center');
+
+    ctx.fillStyle = '#8eb3c5';
+    drawText('Press Enter to restart', WIDTH / 2, 236, 22, 'center');
   }
 }
 

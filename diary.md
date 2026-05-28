@@ -116,3 +116,67 @@ Tracks what changed, what needs testing, and whether it passed.
 ### Validation Status
 - Pending.
 
+---
+
+## V2.0 — Monster Types, Combo, and Audio
+
+### Built
+- Added basic, runner, tank, and elite monsters.
+- Tank monsters have 2 HP and 2 XP.
+- Tank monsters move slower while shielded, then return to normal speed after shield breaks.
+- Added combo multiplier bar from X1 to X5.
+- Kills add combo XP based on monster type.
+- Score is multiplied by current combo level.
+- Single mistake downgrades combo by one level and resets combo XP.
+- Two mistakes in a row reset combo to X1.
+- Laser color changes based on current combo multiplier.
+- Added generated sound effects for laser, monster death, multiplier increase, typing, and errors.
+- Added simple retro arcade background soundtrack.
+
+### Needs Testing
+- Monster type spawn balance by stage.
+- Tank shield speed behavior.
+- Combo XP thresholds and penalty fairness.
+- Score scaling with combo.
+- Laser color clarity across multipliers.
+- Sound volume and soundtrack fatigue.
+- Performance with audio and higher monster counts.
+
+### Validation Status
+- Pending.
+
+---
+
+## V2.1 — UI cleanup and start instructions
+
+### Built
+- Added initial instruction/start screen
+- Removed text below the game board
+- Slightly increased row height
+- Fixed combo multiplier label visibility after X1
+- Removed next-multiplier text beside combo bar
+
+### Needs Testing
+- Start screen Enter flow
+- Combo display from X1 through X5
+- Row readability after height increase
+- No bottom UI text remains
+
+---
+
+## V2.2
+
+### Built
+- Extended the playable grid horizontally.
+- Moved monster spawn position inside the visible play area.
+- Changed spawning to use spawn delays instead of far-offscreen starting positions.
+- Balanced monster distribution across lanes during stage setup.
+- Prevented duplicate words across active lanes.
+- Prevented the same lane from receiving the same word again immediately.
+
+### Needs Testing
+- Monsters should appear soon after spawning instead of traveling invisibly.
+- Wider grid should still leave lane words readable.
+- Monster types should feel evenly distributed across lanes.
+- No duplicate words should appear across lanes at the same time.
+- Completed lane words should not repeat immediately in that lane.
