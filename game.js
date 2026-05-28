@@ -123,7 +123,8 @@ function laneCountForStage(stage) {
 }
 
 function monsterCountForStage(stage) {
-  return 7 + stage * 3;
+  // Mild reduction from V2.2, focused on early-stage readability.
+  return 6 + Math.floor(stage * 2.35);
 }
 
 function baseSpeedForStage(stage) {
@@ -306,7 +307,7 @@ function startStage() {
     const laneIndex = randomChoice(candidateLanes);
     laneLoad[laneIndex] += 1;
 
-    const delay = i * Math.max(0.46, 1.05 - GAME.stage * 0.035) + Math.random() * 0.28;
+    const delay = i * Math.max(0.54, 1.14 - GAME.stage * 0.032) + Math.random() * 0.32;
     GAME.monsters.push(createMonster(laneIndex, delay, speed));
   }
 }

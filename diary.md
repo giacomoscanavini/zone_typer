@@ -180,3 +180,16 @@ Tracks what changed, what needs testing, and whether it passed.
 - Monster types should feel evenly distributed across lanes.
 - No duplicate words should appear across lanes at the same time.
 - Completed lane words should not repeat immediately in that lane.
+
+
+## V2.3 — Spawn Rebalance
+
+### Built
+- Reduced monster count mildly, mainly at lower stages.
+- Increased spawn spacing slightly to reduce early overwhelm.
+- Preserved later-stage pressure by keeping scaling gradual.
+
+### Needs Testing
+- Stage 1–3 should feel less crowded.
+- Stage 4+ should still create pressure.
+- Confirm the game does not become too slow or empty.
