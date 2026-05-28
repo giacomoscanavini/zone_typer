@@ -75,7 +75,7 @@ function containsPowerupKeyword(word) {
   const normalized = word.toLowerCase();
   return [...POWERUP_KEYWORDS].some((keyword) => normalized.includes(keyword));
 }
-const VERSION = 'V6.0';
+const VERSION = 'V6.2';
 
 const COMBO = {
   maxLevel: 5,
@@ -113,6 +113,7 @@ const GAME = {
   clearedStageNumber: 0,
   powerChoiceOffered: false,
   gameOverSoundPlayed: false,
+  nextMonsterId: 1,
   gameStarted: false,
   gameOver: false,
   stageComplete: false,
@@ -143,7 +144,14 @@ const WORDS_BY_TIER = {
     'blueprint', 'calibrate', 'dashboard', 'endpoint', 'firewall', 'frequency',
     'hologram', 'interface', 'keyboard', 'labyrinth', 'navigation', 'overflow',
     'processor', 'quarantine', 'resonance', 'spaceship', 'telemetry', 'terminal',
-    'transistor', 'warehouse'
+    'transistor', 'warehouse',
+    'apricot', 'boulder', 'canyon', 'compass', 'dynamo', 'ember', 'fable',
+    'goblin', 'hazard', 'island', 'lantern', 'machine', 'marble', 'noodle',
+    'obelisk', 'pirate', 'raccoon', 'saffron', 'temple', 'unicorn', 'velvet',
+    'waffle', 'yonder', 'zircon', 'architecture', 'constellation',
+    'documentation', 'encryption', 'extraordinary', 'kaleidoscope',
+    'miscommunication', 'observatory', 'photosynthesis', 'responsibility',
+    'spectrometer', 'thermodynamics', 'transformation', 'unpredictable'
   ],
   capitalized: [
     'Arc', 'Beam', 'Bolt', 'Core', 'Delta', 'Echo', 'Flux', 'Grid', 'Halo',
@@ -154,44 +162,70 @@ const WORDS_BY_TIER = {
     'JumboByte', 'MegaPortal', 'NeonRunner', 'OrbitForge', 'PixelCastle',
     'QuantumGate', 'RocketPilot', 'SolarArray', 'TurboTunnel', 'UltraVector',
     'VaultKeeper', 'WarpEngine', 'ZenithTower', 'AstroNavigation', 'BinaryBridge',
-    'CyberneticRelay', 'DigitalFortress', 'GalacticTerminal', 'MechanicalDragon'
+    'CyberneticRelay', 'DigitalFortress', 'GalacticTerminal', 'MechanicalDragon',
+    'AmberGarden', 'BoulderCity', 'CopperBridge', 'CrystalMarket',
+    'DigitalLibrary', 'EmeraldEngine', 'FloatingHarbor', 'GoldenCircuit',
+    'JupiterGarden', 'KineticPuzzle', 'LunarArchive', 'MarbleFactory',
+    'NebulaStation', 'ObsidianCastle', 'PrismNavigator', 'QuartzMachine',
+    'RobotSymphony', 'SilverTerminal', 'ThunderGarden', 'VelvetComet',
+    'WonderfulSatellite', 'ZirconObservatory'
   ],
   numbers: [
     'a1', 'b2', 'c3', 'd4', 'x9', 'z7', '3d', '4g', '7up', '9ball',
     'arc7', 'beam2', 'bolt9', 'core42', 'data8', 'echo5', 'grid3', 'ion2',
-    'node11', 'nova6', 'orbit8', 'pulse9', 'sector4', 'zone12', 'Alpha7',
+    'node11', 'nova6', 'orbit8', 'pulse9', 'sector4', 'zone12', 'Atlas7',
     'Base64', 'Core99', 'Delta5', 'Grid24', 'Nova8', 'Atlas404', 'Beacon13',
     'Circuit88', 'Dragon3000', 'Echo2026', 'Falcon512', 'Gamma101', 'Harbor77',
     'IonDrive5', 'Jupiter12', 'Kernel900', 'Meteor64', 'Nebula31', 'Orbit2048',
     'Packet256', 'Quantum108', 'Rocket404', 'Signal360', 'Terminal808',
-    'Vector144', 'Voyager1977', 'Waypoint300', 'Xenon1234', 'Zeppelin88'
+    'Vector144', 'Voyager1977', 'Waypoint300', 'Xenon1234', 'Zeppelin88',
+    'Apollo17', 'Beacon204', 'Cipher700', 'Comet55', 'Dynamo202',
+    'Ember19', 'Fable303', 'Galaxy909', 'Harbor202', 'Island404',
+    'Jacket81', 'Kinetic66', 'Lantern707', 'Marble515', 'Nimbus333',
+    'Obelisk616', 'Pirate808', 'Quartz919', 'Robot121', 'Saffron454',
+    'Temple202', 'Unicorn313', 'Velvet626', 'Yonder747', 'Zircon858',
+    'Constellation1001', 'Documentation2024', 'Observatory4096'
   ],
   symbols: [
     'arc!', 'beam?', 'bolt#', 'core$', 'data%', 'echo+', 'flux*', 'grid-',
     'ion_2', 'node.js', 'nova@7', 'pulse+', 'ray/gun', 'rift?', 'scan.io',
-    'spark!', 'star*9', 'warp-speed', 'x-ray', 'zone!', 'Alpha#1', 'Beta+2',
+    'spark!', 'star*9', 'warp-speed', 'x-ray', 'zone!', 'Atlas#1', 'Beta+2',
     'Core-X', 'Grid_7', 'Neo:Zone', 'Pulse.Max', 'atlas.exe', 'beacon++',
     'byte_shift', 'circuit.io', 'cloud-sync', 'data.portal', 'echo_unit',
     'firewall!', 'gamma-ray', 'hyper.link', 'ion-core', 'jolt+bolt',
     'kernel_32', 'mega.byte', 'neon@night', 'orbit/path', 'packet-drop',
     'quantum?', 'rocket.run', 'signal++', 'turbo-mode', 'vector.max',
-    'warp_drive', 'xeno-file', 'zero.day'
+    'warp_drive', 'xeno-file', 'zero.day',
+    'amber-core', 'boulder.exe', 'cipher++', 'comet.path', 'dynamo_mode',
+    'ember@dusk', 'fable.io', 'galaxy-map', 'harbor.node', 'island+gate',
+    'jacket.zip', 'kinetic.wave', 'lantern:code', 'marble_box',
+    'nimbus.cloud', 'obelisk.run', 'pirate.flag', 'quartz#9',
+    'robot.unit', 'saffron.byte', 'temple.sync', 'unicorn.vault',
+    'velvet@moon', 'yonder/path', 'zircon++', 'architecture.v2',
+    'documentation#42', 'observatory.link'
   ],
   phrases: [
     'red alert', 'blue beam', 'dark grid', 'data stream', 'fire wall',
     'moon base', 'night shift', 'power core', 'quick scan', 'safe zone',
     'sector seven', 'star field', 'storm front', 'warp drive', 'zero hour',
-    'Alpha Base', 'Beta Test', 'Code Red', 'Delta Wave', 'Grid Lock',
+    'Atlas Base', 'Beta Test', 'Code Red', 'Delta Wave', 'Grid Lock',
     'Hyper Beam', 'Nova Prime', 'ancient circuit', 'binary bridge',
     'cosmic tunnel', 'digital harbor', 'electric orchard', 'fuzzy keyboard',
     'galactic pancake', 'hidden terminal', 'jumpy robot', 'lunar elevator',
     'magnetic banana', 'neon fortress', 'orange protocol', 'pixel parade',
     'quantum bakery', 'radioactive toaster', 'silent asteroid', 'turbo cactus',
     'ultra checkpoint', 'virtual thunder', 'wandering comet', 'yellow submarine',
-    'zero gravity pizza'
+    'zero gravity pizza',
+    'amber garden', 'boulder canyon', 'copper bridge', 'crystal market',
+    'digital library', 'emerald engine', 'floating harbor', 'golden circuit',
+    'jupiter garden', 'kinetic puzzle', 'lunar archive', 'marble factory',
+    'nebula station', 'obsidian castle', 'prism navigator', 'quartz machine',
+    'robot symphony', 'silver terminal', 'thunder garden', 'velvet comet',
+    'wonderful satellite', 'zircon observatory', 'very confused robot',
+    'polite space goblin', 'accidental noodle parade', 'cosmic waffle factory'
   ],
   expert: [
-    'Quantum-7', 'Signal_42', 'Star Gate 9', 'Core#Alpha', 'Data.Stream',
+    'Quantum-7', 'Signal_42', 'Star Gate 9', 'Core#Atlas', 'Data.Stream',
     'Phase Shift', 'Zero Hour!', 'Binary Pulse', 'Cyber Shield', 'Hyper Vector',
     'Magnetic Field', 'Neon Protocol', 'Orbit Path 12', 'Plasma Reactor',
     'Quantum Tunnel', 'Signal Boost+', 'Solar Flare!', 'Vector Matrix',
@@ -202,7 +236,15 @@ const WORDS_BY_TIER = {
     'neural network parade', 'parallel universe map', 'quantized banana split',
     'recursive moon elevator', 'spectacular syntax error', 'transcontinental modem',
     'unreasonably tiny spaceship', 'virtual reality avalanche', 'whimsical data warehouse',
-    'xylophone powered robot', 'zero latency thunderstorm'
+    'xylophone powered robot', 'zero latency thunderstorm',
+    'architectural kaleidoscope', 'bureaucratic space penguin',
+    'catastrophic noodle incident', 'constellation navigation panel',
+    'documentation emergency protocol', 'electrostatic marmalade engine',
+    'extraterrestrial sandwich machine', 'interplanetary luggage carousel',
+    'microcontroller symphony orchestra', 'photosynthetic robot gardener',
+    'responsibility assignment matrix', 'spectrometer calibration ritual',
+    'thermodynamic pancake simulator', 'transformation sequence complete',
+    'unpredictable asteroid cafeteria'
   ],
 };
 
@@ -556,6 +598,7 @@ function createMonster(laneIndex, delay, speed) {
   const typeKey = pickMonsterType(GAME.stage);
   const type = MONSTER_TYPES[typeKey];
   return {
+    id: GAME.nextMonsterId++,
     typeKey,
     type,
     laneIndex,
@@ -615,6 +658,7 @@ function restartGame() {
   GAME.clearedStageNumber = 0;
   GAME.powerChoiceOffered = false;
   GAME.gameOverSoundPlayed = false;
+  GAME.nextMonsterId = 1;
   GAME.telemetry = createTelemetry();
   startStage();
 }
@@ -800,6 +844,60 @@ function scoreForKill(monster) {
   return 100 * GAME.combo.level * monster.type.xp;
 }
 
+function queueLaserProjectile(lane, targets, color, options = {}) {
+  const targetIds = targets.map((target) => target.id);
+  const targetX = targets[0] ? targets[0].x : GAME.gridLeft + 22;
+
+  GAME.lasers.push({
+    laneIndex: lane.index,
+    y: lane.y,
+    x: GAME.protectedZoneX - 8,
+    targetX,
+    targetIds,
+    mode: options.mode || 'single',
+    label: options.label || '-1',
+    speed: options.speed || 2800,
+    ttl: options.ttl || 0.62,
+    maxTtl: options.ttl || 0.62,
+    length: options.length || 58,
+    color,
+  });
+}
+
+function findLiveMonsterById(id) {
+  return GAME.monsters.find((monster) => monster.id === id && monster.alive && monster.active);
+}
+
+function resolveLaserImpact(laser) {
+  if (laser.targetIds.length === 0) {
+    return false;
+  }
+
+  const targets = laser.targetIds
+    .map((id) => findLiveMonsterById(id))
+    .filter(Boolean);
+
+  if (targets.length === 0) {
+    return true;
+  }
+
+  const impactTarget = targets[0];
+  if (laser.x > impactTarget.x) {
+    return false;
+  }
+
+  for (const target of targets) {
+    target.hp -= 1;
+    GAME.floatingTexts.push({ text: laser.label, x: target.x, y: target.y - 18, ttl: 0.5 });
+
+    if (target.hp <= 0) {
+      awardMonsterKill(target);
+    }
+  }
+
+  return true;
+}
+
 function fireLaser(lane) {
   playLaserSound();
   const monstersInLane = GAME.monsters
@@ -809,13 +907,12 @@ function fireLaser(lane) {
   const drillActive = isPowerActive('drill');
   const targets = drillActive ? monstersInLane : monstersInLane.slice(0, 1);
 
-  GAME.lasers.push({
-    laneIndex: lane.index,
-    y: lane.y,
-    x1: GAME.gridLeft,
-    x2: GAME.protectedZoneX - 4,
-    ttl: 0.16,
-    color: drillActive ? POWERUPS.drill.color : comboColor(),
+  queueLaserProjectile(lane, targets, drillActive ? POWERUPS.drill.color : comboColor(), {
+    mode: drillActive ? 'drill' : 'single',
+    label: drillActive ? 'drill' : '-1',
+    speed: 2800,
+    ttl: 0.62,
+    length: drillActive ? 78 : 58,
   });
 
   GAME.telemetry.lasersFired += 1;
@@ -823,16 +920,7 @@ function fireLaser(lane) {
   lane.flashTimer = 0.22;
   GAME.screenShake = Math.max(GAME.screenShake, drillActive ? 4.2 : 2.5);
 
-  if (targets.length > 0) {
-    for (const target of targets) {
-      target.hp -= 1;
-      GAME.floatingTexts.push({ text: drillActive ? 'drill' : '-1', x: target.x, y: target.y - 18, ttl: 0.5 });
-
-      if (target.hp <= 0) {
-        awardMonsterKill(target);
-      }
-    }
-  } else {
+  if (targets.length === 0) {
     GAME.floatingTexts.push({ text: 'clear', x: GAME.gridLeft + 45, y: lane.y - 20, ttl: 0.55 });
   }
 
@@ -890,25 +978,15 @@ function firePowerLaserAtLane(laneIndex, color = '#ff5edb') {
     .sort((a, b) => b.x - a.x);
   const target = monstersInLane[0];
 
-  GAME.lasers.push({
-    laneIndex,
-    y: lane.y,
-    x1: GAME.gridLeft,
-    x2: GAME.protectedZoneX - 4,
-    ttl: 0.18,
-    color,
+  queueLaserProjectile(lane, target ? [target] : [], color, {
+    label: 'zap',
+    speed: 3000,
+    ttl: 0.58,
+    length: 62,
   });
 
   GAME.telemetry.lasersFired += 1;
   lane.flashTimer = 0.22;
-
-  if (target) {
-    target.hp -= 1;
-    GAME.floatingTexts.push({ text: 'zap', x: target.x, y: target.y - 18, ttl: 0.45 });
-    if (target.hp <= 0) {
-      awardMonsterKill(target);
-    }
-  }
 }
 
 function fireBonusLaserFromPower(correctLaneIndex) {
@@ -1110,9 +1188,13 @@ function update(dt) {
 
   for (const laser of GAME.lasers) {
     laser.ttl -= dt;
+    laser.x -= laser.speed * dt;
+    laser.impactResolved = resolveLaserImpact(laser);
   }
 
-  GAME.lasers = GAME.lasers.filter((laser) => laser.ttl > 0);
+  GAME.lasers = GAME.lasers.filter((laser) => (
+    !laser.impactResolved && laser.ttl > 0 && laser.x > GAME.gridLeft - 90
+  ));
 
   for (const floatingText of GAME.floatingTexts) {
     floatingText.ttl -= dt;
@@ -1475,23 +1557,40 @@ function drawMonsters() {
 
 function drawLasers() {
   for (const laser of GAME.lasers) {
-    const alpha = laser.ttl / 0.16;
+    const alpha = Math.max(0, Math.min(1, laser.ttl / laser.maxTtl));
+    const headX = laser.x;
+    const tailX = laser.x + laser.length;
+    const wobble = Math.sin((1 - alpha) * 24) * 3;
+
     ctx.save();
     ctx.globalAlpha = alpha;
-    ctx.strokeStyle = laser.color;
+    ctx.lineCap = 'round';
     ctx.shadowColor = laser.color;
-    ctx.shadowBlur = 22;
-    ctx.lineWidth = 9;
+    ctx.shadowBlur = 24;
+
+    const gradient = ctx.createLinearGradient(headX, laser.y, tailX, laser.y);
+    gradient.addColorStop(0, '#ffffff');
+    gradient.addColorStop(0.28, laser.color);
+    gradient.addColorStop(1, 'rgba(255,255,255,0)');
+
+    ctx.strokeStyle = gradient;
+    ctx.lineWidth = 10;
     ctx.beginPath();
-    ctx.moveTo(laser.x1, laser.y);
-    ctx.lineTo(laser.x2, laser.y);
+    ctx.moveTo(headX, laser.y + wobble);
+    ctx.lineTo(tailX, laser.y - wobble);
     ctx.stroke();
-    ctx.lineWidth = 2;
-    ctx.strokeStyle = '#ffffff';
+
+    ctx.shadowBlur = 10;
+    ctx.fillStyle = '#ffffff';
     ctx.beginPath();
-    ctx.moveTo(laser.x1, laser.y);
-    ctx.lineTo(laser.x2, laser.y);
-    ctx.stroke();
+    ctx.arc(headX, laser.y + wobble, 5, 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.fillStyle = laser.color;
+    ctx.globalAlpha = alpha * 0.45;
+    ctx.beginPath();
+    ctx.arc(headX + 10, laser.y - wobble, 9, 0, Math.PI * 2);
+    ctx.fill();
     ctx.restore();
   }
 }
