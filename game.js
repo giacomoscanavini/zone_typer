@@ -847,7 +847,7 @@ function drawWords() {
 
 function drawInputUnderGrid() {
   const inputText = GAME.input.length > 0 ? GAME.input.toUpperCase() : 'TYPE A LANE WORD';
-  const y = Math.min(GAME.gridBottom + 38, HEIGHT - 34);
+  const y = Math.min(GAME.gridBottom + 58, HEIGHT - 28);
   const width = 520;
   const x = WIDTH / 2 - width / 2;
   const color = GAME.input.length > 0 ? '#ffd34d' : '#35f6ff';
@@ -968,14 +968,6 @@ function drawMonsters() {
     ctx.save();
     ctx.translate(monster.x, monster.y + bob);
 
-    // Soft elliptical grounding shadow.
-    ctx.save();
-    ctx.globalAlpha = 0.35;
-    ctx.fillStyle = '#00040c';
-    ctx.beginPath();
-    ctx.ellipse(0, monster.radius + 19, monster.radius + 18, 7, 0, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.restore();
 
     drawMonsterSprite(monster, color);
     drawShieldBreakCue(monster);
@@ -1015,7 +1007,6 @@ function drawComboBar() {
   const height = 24;
   const color = comboColor();
 
-  drawNeonText('COMBO', x + width / 2, y - 22, 16, 'center', '#9befff', 8);
   ctx.save();
   ctx.fillStyle = 'rgba(5, 8, 24, 0.9)';
   ctx.strokeStyle = color;
@@ -1033,7 +1024,7 @@ function drawHud() {
   drawPanel(26, 20, 290, 92, '#ff38c8');
   drawNeonText('ZONE', 56, 48, 30, 'left', '#ff38c8', 16);
   drawNeonText('TYPERS', 56, 80, 30, 'left', '#35f6ff', 16);
-  drawNeonText('V3.2', 254, 82, 13, 'left', '#eafcff', 6);
+  drawNeonText('V3.3', 254, 82, 13, 'left', '#eafcff', 6);
 
   drawNeonText('SCORE', WIDTH / 2, 22, 20, 'center', '#ff5edb', 12);
   drawNeonText(String(GAME.score).padStart(7, '0'), WIDTH / 2, 50, 38, 'center', '#ffd34d', 15);
