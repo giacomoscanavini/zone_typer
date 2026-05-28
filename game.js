@@ -19,13 +19,13 @@ const COMBO = {
 };
 
 const GAME = {
-  gridLeft: 44,
-  gridRight: 770,
-  gridTop: 105,
-  gridBottom: 335,
-  laneHeight: 46,
-  protectedZoneX: 790,
-  spawnX: 58,
+  gridLeft: 252,
+  gridRight: 1010,
+  gridTop: 156,
+  gridBottom: 506,
+  laneHeight: 62,
+  protectedZoneX: 1032,
+  spawnX: 270,
   maxLanes: 8,
   input: '',
   score: 0,
@@ -76,7 +76,7 @@ const MONSTER_TYPES = {
     xp: 1,
     radius: 15,
     speedMultiplier: 1,
-    color: '#ff6f91',
+    color: '#ff3b5f',
   },
   runner: {
     label: 'Runner',
@@ -84,7 +84,7 @@ const MONSTER_TYPES = {
     xp: 2,
     radius: 12,
     speedMultiplier: 1.45,
-    color: '#ffb86b',
+    color: '#ff8f2e',
   },
   tank: {
     label: 'Shield',
@@ -93,8 +93,8 @@ const MONSTER_TYPES = {
     radius: 17,
     speedMultiplier: 1,
     shieldSpeedMultiplier: 0.58,
-    color: '#9ae6b4',
-    shieldColor: '#7dd3fc',
+    color: '#ffd34d',
+    shieldColor: '#37f6ff',
   },
   elite: {
     label: 'Elite',
@@ -102,13 +102,25 @@ const MONSTER_TYPES = {
     xp: 5,
     radius: 18,
     speedMultiplier: 0.82,
-    color: '#c084fc',
+    color: '#b65cff',
   },
 };
 
 let audioCtx = null;
 let musicTimer = 0;
 let musicStep = 0;
+
+const SPRITES = {};
+for (const [key, src] of Object.entries({
+  basic: 'assets/sprites/monster-basic.png',
+  runner: 'assets/sprites/monster-runner.png',
+  tank: 'assets/sprites/monster-tank.png',
+  elite: 'assets/sprites/monster-elite.png',
+})) {
+  const image = new Image();
+  image.src = src;
+  SPRITES[key] = image;
+}
 
 function clamp(value, min, max) {
   return Math.max(min, Math.min(max, value));
@@ -123,8 +135,8 @@ function laneCountForStage(stage) {
 }
 
 function monsterCountForStage(stage) {
-  // Mild reduction from V2.2, focused on early-stage readability.
-  return 6 + Math.floor(stage * 2.35);
+  // Reduced spawn volume in V3.2 for better sprite readability.
+  return 4 + Math.floor(stage * 1.55);
 }
 
 function baseSpeedForStage(stage) {
@@ -307,7 +319,7 @@ function startStage() {
     const laneIndex = randomChoice(candidateLanes);
     laneLoad[laneIndex] += 1;
 
-    const delay = i * Math.max(0.54, 1.14 - GAME.stage * 0.032) + Math.random() * 0.32;
+    const delay = i * Math.max(0.86, 1.58 - GAME.stage * 0.026) + Math.random() * 0.42;
     GAME.monsters.push(createMonster(laneIndex, delay, speed));
   }
 }
@@ -623,33 +635,140 @@ function update(dt) {
   GAME.floatingTexts = GAME.floatingTexts.filter((floatingText) => floatingText.ttl > 0);
 }
 
+
+function roundRect(x, y, width, height, radius = 10, fill = true, stroke = false) {
+  const r = Math.min(radius, width / 2, height / 2);
+  ctx.beginPath();
+  ctx.moveTo(x + r, y);
+  ctx.lineTo(x + width - r, y);
+  ctx.quadraticCurveTo(x + width, y, x + width, y + r);
+  ctx.lineTo(x + width, y + height - r);
+  ctx.quadraticCurveTo(x + width, y + height, x + width - r, y + height);
+  ctx.lineTo(x + r, y + height);
+  ctx.quadraticCurveTo(x, y + height, x, y + height - r);
+  ctx.lineTo(x, y + r);
+  ctx.quadraticCurveTo(x, y, x + r, y);
+  if (fill) ctx.fill();
+  if (stroke) ctx.stroke();
+}
+
+function drawPanel(x, y, width, height, color = '#35f6ff', alpha = 0.12) {
+  ctx.save();
+  ctx.fillStyle = `rgba(5, 8, 24, 0.78)`;
+  ctx.strokeStyle = color;
+  ctx.lineWidth = 2;
+  ctx.shadowColor = color;
+  ctx.shadowBlur = 14;
+  roundRect(x, y, width, height, 14, true, true);
+  ctx.shadowBlur = 0;
+  ctx.fillStyle = color.replace(')', `, ${alpha})`).replace('rgb', 'rgba');
+  ctx.restore();
+}
+
+function drawNeonText(text, x, y, size = 18, align = 'left', color = '#eafcff', glow = 8) {
+  ctx.save();
+  ctx.font = `700 ${size}px "Trebuchet MS", Arial`;
+  ctx.textAlign = align;
+  ctx.textBaseline = 'middle';
+  ctx.shadowColor = color;
+  ctx.shadowBlur = glow;
+  ctx.fillStyle = color;
+  ctx.fillText(text, x, y);
+  ctx.restore();
+}
+
+function drawCityBackground() {
+  const sky = ctx.createLinearGradient(0, 0, 0, HEIGHT);
+  sky.addColorStop(0, '#07051f');
+  sky.addColorStop(0.52, '#09091a');
+  sky.addColorStop(1, '#02030a');
+  ctx.fillStyle = sky;
+  ctx.fillRect(0, 0, WIDTH, HEIGHT);
+
+  ctx.save();
+  ctx.globalAlpha = 0.9;
+  for (let i = 0; i < 42; i += 1) {
+    const x = i * 34 + ((i * 19) % 17);
+    const h = 70 + ((i * 47) % 160);
+    const y = HEIGHT - 80 - h;
+    ctx.fillStyle = i % 3 === 0 ? 'rgba(11, 28, 58, 0.72)' : 'rgba(9, 18, 43, 0.62)';
+    ctx.fillRect(x, y, 24 + (i % 4) * 10, h);
+    ctx.fillStyle = i % 2 === 0 ? 'rgba(53,246,255,0.28)' : 'rgba(255,56,200,0.26)';
+    for (let wy = y + 14; wy < HEIGHT - 96; wy += 22) {
+      if ((wy + i) % 3 !== 0) ctx.fillRect(x + 6, wy, 4, 7);
+      if ((wy + i) % 4 !== 0) ctx.fillRect(x + 16, wy, 4, 7);
+    }
+  }
+  ctx.globalAlpha = 1;
+
+  const floor = ctx.createLinearGradient(0, HEIGHT - 92, 0, HEIGHT);
+  floor.addColorStop(0, 'rgba(18, 9, 38, 0.88)');
+  floor.addColorStop(1, '#03030b');
+  ctx.fillStyle = floor;
+  ctx.fillRect(0, HEIGHT - 95, WIDTH, 95);
+  ctx.strokeStyle = 'rgba(255,56,200,0.28)';
+  ctx.lineWidth = 1;
+  for (let x = -WIDTH; x < WIDTH * 2; x += 58) {
+    ctx.beginPath();
+    ctx.moveTo(x, HEIGHT);
+    ctx.lineTo(WIDTH / 2 + (x - WIDTH / 2) * 0.14, HEIGHT - 95);
+    ctx.stroke();
+  }
+  ctx.strokeStyle = 'rgba(53,246,255,0.18)';
+  for (let y = HEIGHT - 8; y > HEIGHT - 95; y -= 17) {
+    ctx.beginPath();
+    ctx.moveTo(0, y);
+    ctx.lineTo(WIDTH, y);
+    ctx.stroke();
+  }
+  ctx.restore();
+}
+
 function drawText(text, x, y, size = 18, align = 'left') {
-  ctx.font = `${size}px Arial`;
+  ctx.font = `700 ${size}px "Trebuchet MS", Arial`;
   ctx.textAlign = align;
   ctx.textBaseline = 'middle';
   ctx.fillText(text, x, y);
 }
 
 function drawGrid() {
-  ctx.strokeStyle = '#1d4d63';
-  ctx.lineWidth = 1;
-
   const laneWidth = GAME.gridRight - GAME.gridLeft;
-  const cellCount = 10;
+  const cellCount = 12;
   const cellWidth = laneWidth / cellCount;
+
+  ctx.save();
+  ctx.shadowColor = '#ff38c8';
+  ctx.shadowBlur = 18;
+  ctx.strokeStyle = '#ff38c8';
+  ctx.lineWidth = 2;
+  roundRect(GAME.gridLeft - 14, GAME.gridTop - 14, laneWidth + 92, GAME.gridBottom - GAME.gridTop + 28, 18, false, true);
+  ctx.restore();
+
+  ctx.save();
+  ctx.fillStyle = 'rgba(3, 6, 18, 0.82)';
+  roundRect(GAME.gridLeft, GAME.gridTop, laneWidth, GAME.gridBottom - GAME.gridTop, 8, true, false);
+
+  const floorGrad = ctx.createLinearGradient(GAME.gridLeft, GAME.gridTop, GAME.gridRight, GAME.gridBottom);
+  floorGrad.addColorStop(0, 'rgba(44, 17, 55, 0.36)');
+  floorGrad.addColorStop(0.55, 'rgba(8, 15, 35, 0.82)');
+  floorGrad.addColorStop(1, 'rgba(18, 34, 62, 0.56)');
+  ctx.fillStyle = floorGrad;
+  roundRect(GAME.gridLeft, GAME.gridTop, laneWidth, GAME.gridBottom - GAME.gridTop, 8, true, false);
 
   for (const lane of GAME.lanes) {
     const danger = getLaneDanger(lane.index);
-    const flashAlpha = lane.flashTimer > 0 ? 0.14 : 0;
-    const warningAlpha = danger > 0.68 ? (danger - 0.68) * 0.7 : 0;
+    const flashAlpha = lane.flashTimer > 0 ? 0.24 : 0;
+    const warningAlpha = danger > 0.68 ? (danger - 0.68) * 0.95 : 0;
 
-    ctx.fillStyle = `rgba(93, 240, 255, ${flashAlpha})`;
+    ctx.fillStyle = `rgba(53, 246, 255, ${flashAlpha})`;
     ctx.fillRect(GAME.gridLeft, lane.top, laneWidth, lane.bottom - lane.top);
 
-    ctx.fillStyle = `rgba(255, 111, 145, ${warningAlpha})`;
+    ctx.fillStyle = `rgba(255, 56, 200, ${warningAlpha})`;
     ctx.fillRect(GAME.gridLeft, lane.top, laneWidth, lane.bottom - lane.top);
   }
 
+  ctx.strokeStyle = 'rgba(53, 246, 255, 0.22)';
+  ctx.lineWidth = 1;
   for (let i = 0; i <= cellCount; i += 1) {
     const x = GAME.gridLeft + i * cellWidth;
     ctx.beginPath();
@@ -659,23 +778,47 @@ function drawGrid() {
   }
 
   for (const lane of GAME.lanes) {
+    ctx.strokeStyle = 'rgba(255, 56, 200, 0.62)';
+    ctx.lineWidth = 2;
     ctx.beginPath();
     ctx.moveTo(GAME.gridLeft, lane.top);
     ctx.lineTo(GAME.gridRight, lane.top);
     ctx.stroke();
+
+    ctx.fillStyle = 'rgba(10, 6, 28, 0.86)';
+    ctx.strokeStyle = '#8f4dff';
+    ctx.shadowColor = '#8f4dff';
+    ctx.shadowBlur = 8;
+    roundRect(GAME.gridLeft - 48, lane.y - 19, 34, 38, 8, true, true);
+    ctx.shadowBlur = 0;
+    drawNeonText(String(lane.index + 1), GAME.gridLeft - 31, lane.y, 20, 'center', '#d8b4ff', 8);
   }
 
   const lastLane = GAME.lanes[GAME.lanes.length - 1];
+  ctx.strokeStyle = 'rgba(255, 56, 200, 0.62)';
   ctx.beginPath();
   ctx.moveTo(GAME.gridLeft, lastLane.bottom);
   ctx.lineTo(GAME.gridRight, lastLane.bottom);
   ctx.stroke();
 
-  ctx.fillStyle = 'rgba(31, 205, 255, 0.12)';
-  ctx.fillRect(GAME.protectedZoneX, GAME.gridTop, 42, GAME.gridBottom - GAME.gridTop);
+  ctx.save();
+  const zoneGrad = ctx.createLinearGradient(GAME.protectedZoneX, GAME.gridTop, GAME.protectedZoneX + 60, GAME.gridTop);
+  zoneGrad.addColorStop(0, 'rgba(53, 246, 255, 0.26)');
+  zoneGrad.addColorStop(1, 'rgba(53, 246, 255, 0.02)');
+  ctx.fillStyle = zoneGrad;
+  ctx.fillRect(GAME.protectedZoneX, GAME.gridTop, 58, GAME.gridBottom - GAME.gridTop);
+  ctx.strokeStyle = '#35f6ff';
+  ctx.shadowColor = '#35f6ff';
+  ctx.shadowBlur = 16;
+  ctx.lineWidth = 3;
+  ctx.beginPath();
+  ctx.moveTo(GAME.protectedZoneX, GAME.gridTop - 4);
+  ctx.lineTo(GAME.protectedZoneX, GAME.gridBottom + 4);
+  ctx.stroke();
+  ctx.restore();
 
-  ctx.fillStyle = '#d8f6ff';
-  drawText('ZONE', GAME.protectedZoneX + 21, GAME.gridTop - 20, 16, 'center');
+  drawNeonText('ZONE', GAME.protectedZoneX + 31, GAME.gridTop - 25, 17, 'center', '#35f6ff', 12);
+  ctx.restore();
 }
 
 function drawWords() {
@@ -684,164 +827,267 @@ function drawWords() {
     const typed = GAME.input;
     const isTarget = word.startsWith(typed) && typed.length > 0;
     const danger = getLaneDanger(lane.index);
-    const wordX = GAME.protectedZoneX + 54;
+    const wordX = GAME.protectedZoneX + 78;
+    const panelColor = isTarget ? '#ffd34d' : danger > 0.72 ? '#ff38c8' : '#35f6ff';
 
-    if (isTarget) {
-      ctx.fillStyle = lane.wrongTimer > 0 ? 'rgba(255, 111, 145, 0.35)' : 'rgba(255, 247, 168, 0.16)';
-      ctx.fillRect(wordX - 8, lane.y - 20, WIDTH - wordX - 14, 40);
-    }
+    ctx.save();
+    ctx.fillStyle = isTarget ? 'rgba(255, 211, 77, 0.10)' : 'rgba(5, 8, 24, 0.78)';
+    ctx.strokeStyle = panelColor;
+    ctx.lineWidth = isTarget ? 2.5 : 1.5;
+    ctx.shadowColor = panelColor;
+    ctx.shadowBlur = isTarget ? 14 : 7;
+    roundRect(wordX - 14, lane.y - 21, 150, 42, 8, true, true);
+    ctx.restore();
 
-    ctx.fillStyle = lane.wrongTimer > 0 ? '#ff8ca3' : isTarget ? '#fff7a8' : danger > 0.72 ? '#ffb6c4' : '#d8f6ff';
-    drawText(word, wordX, lane.y, 25, 'left');
+    drawNeonText(word.toUpperCase(), wordX + 60, lane.y, 22, 'center', lane.wrongTimer > 0 ? '#ff7a9d' : isTarget ? '#ffd34d' : '#eafcff', 8);
 
-    if (isTarget) {
-      ctx.fillStyle = '#50e6ff';
-      drawText(typed, wordX, lane.y, 25, 'left');
-    }
   }
+}
+
+
+function drawInputUnderGrid() {
+  const inputText = GAME.input.length > 0 ? GAME.input.toUpperCase() : 'TYPE A LANE WORD';
+  const y = Math.min(GAME.gridBottom + 38, HEIGHT - 34);
+  const width = 520;
+  const x = WIDTH / 2 - width / 2;
+  const color = GAME.input.length > 0 ? '#ffd34d' : '#35f6ff';
+
+  ctx.save();
+  ctx.fillStyle = 'rgba(5, 8, 24, 0.86)';
+  ctx.strokeStyle = color;
+  ctx.lineWidth = 2;
+  ctx.shadowColor = color;
+  ctx.shadowBlur = 12;
+  roundRect(x, y - 22, width, 44, 10, true, true);
+  ctx.restore();
+
+  drawNeonText('INPUT', x + 58, y, 16, 'center', '#9befff', 8);
+  drawNeonText(inputText, x + 292, y, 24, 'center', color, 12);
+}
+
+function drawMonsterEye(x, y, color = '#fff6b0') {
+  ctx.save();
+  ctx.fillStyle = color;
+  ctx.shadowColor = color;
+  ctx.shadowBlur = 8;
+  ctx.beginPath();
+  ctx.arc(x, y, 4, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.fillStyle = '#050515';
+  ctx.beginPath();
+  ctx.arc(x + 1, y, 1.5, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.restore();
+}
+
+function drawMonsterSprite(monster, color) {
+  const image = SPRITES[monster.typeKey];
+  const size = monster.typeKey === 'runner' ? 58 : monster.typeKey === 'tank' ? 68 : monster.typeKey === 'elite' ? 66 : 64;
+
+  if (image && image.complete && image.naturalWidth > 0) {
+    ctx.save();
+    ctx.shadowColor = color;
+    ctx.shadowBlur = 18;
+    ctx.imageSmoothingEnabled = false;
+    ctx.drawImage(image, -size / 2, -size / 2, size, size);
+    ctx.restore();
+    return;
+  }
+
+  // Fallback if image assets are not available.
+  ctx.fillStyle = color;
+  ctx.beginPath();
+  ctx.arc(0, 0, monster.radius, 0, Math.PI * 2);
+  ctx.fill();
+}
+
+function drawMonsterHealth(monster) {
+  if (monster.maxHp <= 1) return;
+
+  const width = 34;
+  const height = 5;
+  const x = -width / 2;
+  const y = monster.radius + 22;
+  ctx.save();
+  ctx.fillStyle = 'rgba(2, 5, 15, 0.82)';
+  ctx.strokeStyle = 'rgba(255,255,255,0.45)';
+  roundRect(x, y, width, height, 3, true, true);
+  ctx.fillStyle = monster.hp === monster.maxHp ? '#35f6ff' : '#ff4b6e';
+  roundRect(x + 1, y + 1, (width - 2) * (monster.hp / monster.maxHp), height - 2, 2, true, false);
+  ctx.restore();
+}
+
+function drawShieldBreakCue(monster) {
+  if (monster.typeKey !== 'tank' || monster.hp !== monster.maxHp) return;
+
+  const pulse = 0.55 + Math.sin(performance.now() / 120) * 0.18;
+  ctx.save();
+  ctx.strokeStyle = `rgba(53, 246, 255, ${pulse})`;
+  ctx.shadowColor = '#35f6ff';
+  ctx.shadowBlur = 18;
+  ctx.lineWidth = 3;
+  ctx.beginPath();
+  ctx.arc(0, 0, monster.radius + 18, -0.6, Math.PI * 1.65);
+  ctx.stroke();
+  ctx.beginPath();
+  ctx.arc(0, 0, monster.radius + 22, Math.PI * 0.25, Math.PI * 0.88);
+  ctx.stroke();
+  ctx.restore();
+}
+
+function drawMonsterLabel(monster, color) {
+  const labels = {
+    basic: 'DEMON',
+    runner: 'BOT',
+    tank: monster.hp === monster.maxHp ? 'SHIELD' : 'TANK',
+    elite: 'SKULL',
+  };
+
+  ctx.save();
+  ctx.globalAlpha = 0.82;
+  ctx.fillStyle = 'rgba(5, 8, 24, 0.72)';
+  ctx.strokeStyle = color;
+  ctx.lineWidth = 1;
+  roundRect(-28, -42, 56, 16, 4, true, true);
+  ctx.restore();
+  drawNeonText(labels[monster.typeKey], 0, -34, 9, 'center', color, 5);
 }
 
 function drawMonsters() {
   for (const monster of GAME.monsters) {
+    if (!monster.active) continue;
+
     const danger = getLaneDanger(monster.laneIndex);
-    ctx.fillStyle = danger > 0.72 ? '#ff3f6c' : monster.type.color;
+    const baseColor = monster.typeKey === 'basic' ? '#ff3e55'
+      : monster.typeKey === 'runner' ? '#35dfff'
+      : monster.typeKey === 'tank' ? '#ffd34d'
+      : '#c084fc';
+    const color = danger > 0.72 ? '#ff2f6d' : baseColor;
+    const bob = Math.sin(performance.now() / 170 + monster.x * 0.05) * 2;
 
-    if (!monster.active) {
-      continue;
-    }
+    ctx.save();
+    ctx.translate(monster.x, monster.y + bob);
 
-    if (monster.typeKey === 'runner') {
-      ctx.beginPath();
-      ctx.moveTo(monster.x + monster.radius, monster.y);
-      ctx.lineTo(monster.x - monster.radius, monster.y - monster.radius);
-      ctx.lineTo(monster.x - monster.radius, monster.y + monster.radius);
-      ctx.closePath();
-      ctx.fill();
-    } else {
-      ctx.beginPath();
-      ctx.arc(monster.x, monster.y, monster.radius, 0, Math.PI * 2);
-      ctx.fill();
-    }
-
-    if (monster.typeKey === 'tank' && monster.hp === monster.maxHp) {
-      ctx.strokeStyle = monster.type.shieldColor;
-      ctx.lineWidth = 3;
-      ctx.beginPath();
-      ctx.arc(monster.x, monster.y, monster.radius + 4, 0, Math.PI * 2);
-      ctx.stroke();
-    }
-
-    if (monster.typeKey === 'elite') {
-      ctx.strokeStyle = '#f0abfc';
-      ctx.lineWidth = 2;
-      ctx.beginPath();
-      ctx.arc(monster.x, monster.y, monster.radius + 4, 0, Math.PI * 2);
-      ctx.stroke();
-    }
-
-    if (monster.hp > 1) {
-      ctx.fillStyle = '#071018';
-      drawText(String(monster.hp), monster.x, monster.y, 13, 'center');
-    }
-
-    ctx.fillStyle = '#3b1020';
+    // Soft elliptical grounding shadow.
+    ctx.save();
+    ctx.globalAlpha = 0.35;
+    ctx.fillStyle = '#00040c';
     ctx.beginPath();
-    ctx.arc(monster.x - 5, monster.y - 4, 2.5, 0, Math.PI * 2);
-    ctx.arc(monster.x + 5, monster.y - 4, 2.5, 0, Math.PI * 2);
+    ctx.ellipse(0, monster.radius + 19, monster.radius + 18, 7, 0, 0, Math.PI * 2);
     ctx.fill();
+    ctx.restore();
+
+    drawMonsterSprite(monster, color);
+    drawShieldBreakCue(monster);
+    drawMonsterHealth(monster);
+
+    ctx.restore();
   }
 }
 
 function drawLasers() {
   for (const laser of GAME.lasers) {
+    const alpha = laser.ttl / 0.16;
+    ctx.save();
+    ctx.globalAlpha = alpha;
     ctx.strokeStyle = laser.color;
-    ctx.globalAlpha = laser.ttl / 0.16;
-    ctx.lineWidth = 5;
+    ctx.shadowColor = laser.color;
+    ctx.shadowBlur = 22;
+    ctx.lineWidth = 9;
     ctx.beginPath();
     ctx.moveTo(laser.x1, laser.y);
     ctx.lineTo(laser.x2, laser.y);
     ctx.stroke();
-    ctx.globalAlpha = 1;
+    ctx.lineWidth = 2;
+    ctx.strokeStyle = '#ffffff';
+    ctx.beginPath();
+    ctx.moveTo(laser.x1, laser.y);
+    ctx.lineTo(laser.x2, laser.y);
+    ctx.stroke();
+    ctx.restore();
   }
 }
 
 function drawComboBar() {
-  const x = 330;
-  const y = 67;
-  const width = 300;
-  const height = 18;
+  const x = 440;
+  const y = 74;
+  const width = 420;
+  const height = 24;
   const color = comboColor();
 
-  ctx.fillStyle = 'rgba(16, 29, 42, 0.88)';
-  ctx.fillRect(x, y, width, height);
+  drawNeonText('COMBO', x + width / 2, y - 22, 16, 'center', '#9befff', 8);
+  ctx.save();
+  ctx.fillStyle = 'rgba(5, 8, 24, 0.9)';
   ctx.strokeStyle = color;
-  ctx.lineWidth = 1;
-  ctx.strokeRect(x, y, width, height);
+  ctx.lineWidth = 2;
+  ctx.shadowColor = color;
+  ctx.shadowBlur = 14;
+  roundRect(x, y, width, height, 8, true, true);
   ctx.fillStyle = color;
-  ctx.fillRect(x, y, width * comboProgress(), height);
-  ctx.fillStyle = color;
-  drawText(`X${GAME.combo.level}`, x - 18, y + height / 2, 20, 'right');
+  roundRect(x + 3, y + 3, (width - 6) * comboProgress(), height - 6, 6, true, false);
+  ctx.restore();
+  drawNeonText(`X${GAME.combo.level}`, x - 24, y + height / 2, 27, 'right', color, 14);
 }
 
 function drawHud() {
-  ctx.fillStyle = '#d8f6ff';
-  drawText(`Stage ${GAME.stage}`, 30, 35, 22);
-  drawText(`Score ${GAME.score}`, 155, 35, 22);
-  drawText(`Accuracy ${getAccuracy()}%`, 310, 35, 22);
-  drawText(`Kills ${GAME.telemetry.monstersKilled}`, 510, 35, 22);
+  drawPanel(26, 20, 290, 92, '#ff38c8');
+  drawNeonText('ZONE', 56, 48, 30, 'left', '#ff38c8', 16);
+  drawNeonText('TYPERS', 56, 80, 30, 'left', '#35f6ff', 16);
+  drawNeonText('V3.2', 254, 82, 13, 'left', '#eafcff', 6);
+
+  drawNeonText('SCORE', WIDTH / 2, 22, 20, 'center', '#ff5edb', 12);
+  drawNeonText(String(GAME.score).padStart(7, '0'), WIDTH / 2, 50, 38, 'center', '#ffd34d', 15);
   drawComboBar();
 
+  drawPanel(980, 20, 268, 92, '#35f6ff');
+  drawNeonText(`STAGE ${String(GAME.stage).padStart(2, '0')}`, 1006, 49, 21, 'left', '#35f6ff', 10);
+  drawNeonText(`ACC ${getAccuracy()}%`, 1006, 78, 18, 'left', '#eafcff', 6);
+  drawNeonText(`KILLS ${GAME.telemetry.monstersKilled}`, 1134, 78, 18, 'left', '#eafcff', 6);
 }
 
 function drawFloatingTexts() {
   for (const floatingText of GAME.floatingTexts) {
-    ctx.fillStyle = `rgba(255, 247, 168, ${clamp(floatingText.ttl, 0, 1)})`;
-    drawText(floatingText.text, floatingText.x, floatingText.y, 18, 'center');
+    ctx.globalAlpha = clamp(floatingText.ttl, 0, 1);
+    drawNeonText(floatingText.text, floatingText.x, floatingText.y, 18, 'center', '#ffd34d', 8);
+    ctx.globalAlpha = 1;
   }
 }
 
 function drawOverlay() {
   if (!GAME.gameStarted) {
-    ctx.fillStyle = 'rgba(7, 16, 24, 0.86)';
+    ctx.fillStyle = 'rgba(3, 3, 12, 0.82)';
     ctx.fillRect(0, 0, WIDTH, HEIGHT);
-    ctx.fillStyle = '#d8f6ff';
-    drawText('ZONE TYPERS', WIDTH / 2, 142, 46, 'center');
-    ctx.fillStyle = '#8eb3c5';
-    drawText('Type the word beside a lane to fire into that lane.', WIDTH / 2, 210, 22, 'center');
-    drawText('Stop monsters before they reach the protected zone.', WIDTH / 2, 246, 22, 'center');
-    drawText('Correct kills build the score multiplier. Two mistakes reset it.', WIDTH / 2, 282, 22, 'center');
-    ctx.fillStyle = '#fff7a8';
-    drawText('Press Enter to start', WIDTH / 2, 354, 26, 'center');
+    drawPanel(WIDTH / 2 - 310, 138, 620, 356, '#ff38c8');
+    drawNeonText('ZONE TYPERS', WIDTH / 2, 202, 56, 'center', '#ff38c8', 22);
+    drawNeonText('ARCADE DEFENSE', WIDTH / 2, 252, 25, 'center', '#35f6ff', 16);
+    drawNeonText('Type the word beside a lane to fire into that lane.', WIDTH / 2, 318, 22, 'center', '#eafcff', 8);
+    drawNeonText('Stop monsters before they breach the glowing zone.', WIDTH / 2, 354, 22, 'center', '#eafcff', 8);
+    drawNeonText('Kills build the score multiplier. Two mistakes reset it.', WIDTH / 2, 390, 22, 'center', '#ffd34d', 8);
+    drawNeonText('PRESS ENTER', WIDTH / 2, 456, 31, 'center', '#35f6ff', 20);
     return;
   }
 
   if (GAME.stageMessageTimer > 0) {
-    ctx.fillStyle = 'rgba(7, 16, 24, 0.55)';
+    ctx.fillStyle = 'rgba(3, 3, 12, 0.50)';
     ctx.fillRect(0, 0, WIDTH, HEIGHT);
-    ctx.fillStyle = '#d8f6ff';
-    drawText(`STAGE ${GAME.stage}`, WIDTH / 2, HEIGHT / 2 - 18, 42, 'center');
-    ctx.fillStyle = '#8eb3c5';
-    drawText('protect the zone', WIDTH / 2, HEIGHT / 2 + 28, 22, 'center');
+    drawNeonText(`STAGE ${GAME.stage}`, WIDTH / 2, HEIGHT / 2 - 18, 50, 'center', '#ffd34d', 20);
+    drawNeonText('PROTECT THE ZONE', WIDTH / 2, HEIGHT / 2 + 34, 23, 'center', '#35f6ff', 12);
   }
 
   if (GAME.stageComplete) {
-    ctx.fillStyle = 'rgba(7, 16, 24, 0.45)';
+    ctx.fillStyle = 'rgba(3, 3, 12, 0.45)';
     ctx.fillRect(0, 0, WIDTH, HEIGHT);
-    ctx.fillStyle = '#d8f6ff';
-    drawText('STAGE CLEAR', WIDTH / 2, HEIGHT / 2, 40, 'center');
+    drawNeonText('STAGE CLEAR', WIDTH / 2, HEIGHT / 2, 48, 'center', '#35f6ff', 20);
   }
 
   if (GAME.gameOver) {
-    ctx.fillStyle = 'rgba(7, 16, 24, 0.82)';
+    ctx.fillStyle = 'rgba(3, 3, 12, 0.86)';
     ctx.fillRect(0, 0, WIDTH, HEIGHT);
-    ctx.fillStyle = '#ff8ca3';
-    drawText('ZONE BREACHED', WIDTH / 2, 98, 44, 'center');
-    ctx.fillStyle = '#d8f6ff';
-    drawText(`Final Score: ${GAME.score}`, WIDTH / 2, 148, 24, 'center');
-    drawText(`Stage: ${GAME.telemetry.highestStage}  Accuracy: ${getAccuracy()}%  Kills: ${GAME.telemetry.monstersKilled}`, WIDTH / 2, 184, 20, 'center');
-
-    ctx.fillStyle = '#8eb3c5';
-    drawText('Press Enter to restart', WIDTH / 2, 236, 22, 'center');
+    drawPanel(WIDTH / 2 - 330, 120, 660, 310, '#ff38c8');
+    drawNeonText('ZONE BREACHED', WIDTH / 2, 184, 48, 'center', '#ff3b5f', 20);
+    drawNeonText(`FINAL SCORE ${GAME.score}`, WIDTH / 2, 242, 27, 'center', '#ffd34d', 12);
+    drawNeonText(`STAGE ${GAME.telemetry.highestStage}   ACC ${getAccuracy()}%   KILLS ${GAME.telemetry.monstersKilled}`, WIDTH / 2, 288, 21, 'center', '#eafcff', 8);
+    drawNeonText('PRESS ENTER TO RESTART', WIDTH / 2, 358, 25, 'center', '#35f6ff', 16);
   }
 }
 
@@ -852,16 +1098,13 @@ function render() {
   const offsetX = shake > 0 ? (Math.random() - 0.5) * shake : 0;
   const offsetY = shake > 0 ? (Math.random() - 0.5) * shake : 0;
 
-  const gradient = ctx.createLinearGradient(0, 0, WIDTH, HEIGHT);
-  gradient.addColorStop(0, '#071018');
-  gradient.addColorStop(1, '#0d2433');
-  ctx.fillStyle = gradient;
-  ctx.fillRect(0, 0, WIDTH, HEIGHT);
+  drawCityBackground();
 
   ctx.save();
   ctx.translate(offsetX, offsetY);
   drawGrid();
   drawWords();
+  drawInputUnderGrid();
   drawLasers();
   drawMonsters();
   drawFloatingTexts();

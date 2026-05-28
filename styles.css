@@ -1,34 +1,55 @@
 :root {
-  --bg: #071018;
-  --panel: #101d2a;
-  --text: #d8f6ff;
-  --muted: #8eb3c5;
+  --bg: #050515;
+  --cyan: #35f6ff;
+  --pink: #ff38c8;
+  --gold: #ffd34d;
+  --violet: #8f4dff;
+  --text: #eafcff;
 }
 
-* {
-  box-sizing: border-box;
-}
+* { box-sizing: border-box; }
 
 html,
 body {
   margin: 0;
   min-height: 100%;
-  background: radial-gradient(circle at top, #123047 0%, var(--bg) 55%);
+  background:
+    radial-gradient(circle at 50% 0%, rgba(255, 56, 200, 0.18), transparent 28%),
+    radial-gradient(circle at 40% 20%, rgba(53, 246, 255, 0.12), transparent 34%),
+    linear-gradient(180deg, #080622 0%, #060814 54%, #02030a 100%);
   color: var(--text);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: "Trebuchet MS", Arial, Helvetica, sans-serif;
+  overflow: hidden;
+}
+
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  background:
+    linear-gradient(rgba(255,255,255,0.025) 50%, rgba(0,0,0,0.035) 50%),
+    linear-gradient(90deg, rgba(255,56,200,0.03), rgba(53,246,255,0.025));
+  background-size: 100% 4px, 100% 100%;
+  mix-blend-mode: screen;
 }
 
 #game-shell {
+  min-height: 100vh;
   display: flex;
-  flex-direction: column;
   align-items: center;
-  padding: 20px;
+  justify-content: center;
+  padding: 10px;
 }
 
 #game {
-  max-width: 100%;
-  border: 1px solid #2b647e;
-  background: #071018;
-  box-shadow: 0 0 28px rgba(33, 198, 255, 0.18);
+  width: min(100vw - 20px, 1280px);
+  height: auto;
+  border: 2px solid rgba(53, 246, 255, 0.8);
+  border-radius: 12px;
+  background: #050515;
+  box-shadow:
+    0 0 18px rgba(53, 246, 255, 0.5),
+    0 0 48px rgba(255, 56, 200, 0.24),
+    inset 0 0 22px rgba(53, 246, 255, 0.12);
 }
-
