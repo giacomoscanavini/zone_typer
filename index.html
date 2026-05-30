@@ -1,55 +1,32 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Zone Typers V6.2</title>
-  <link rel="stylesheet" href="styles.css" />
+    <!-- meta -->
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Zone Typer</title>
+    <!-- style -->
+     <link rel="stylesheet" href="style.css" />
 </head>
+
 <body>
-  <main id="game-shell">
-    <canvas id="game" width="1280" height="720" aria-label="Zone Typers game canvas"></canvas>
-  </main>
-  <script src="js/00-foundation/dom.js"></script>
-  <script src="js/00-foundation/powerupConfig.js"></script>
-  <script src="js/00-foundation/gameConfig.js"></script>
-  <script src="js/00-foundation/utils.js"></script>
-  <script src="js/01-content/wordTiers.js"></script>
-  <script src="js/01-content/monsterTypes.js"></script>
-  <script src="js/02-assets/sprites.js"></script>
-  <script src="js/03-audio/audioState.js"></script>
-  <script src="js/03-audio/audioEngine.js"></script>
-  <script src="js/03-audio/soundEffects.js"></script>
-  <script src="js/03-audio/music.js"></script>
-  <script src="js/04-stage/stageScaling.js"></script>
-  <script src="js/04-stage/telemetry.js"></script>
-  <script src="js/04-stage/wordSelection.js"></script>
-  <script src="js/04-stage/monsterSelection.js"></script>
-  <script src="js/04-stage/lanes.js"></script>
-  <script src="js/04-stage/monsters.js"></script>
-  <script src="js/04-stage/stageLifecycle.js"></script>
-  <script src="js/05-powerups/powerState.js"></script>
-  <script src="js/05-powerups/wordEffects.js"></script>
-  <script src="js/05-powerups/inventory.js"></script>
-  <script src="js/05-powerups/activation.js"></script>
-  <script src="js/06-combat/combo.js"></script>
-  <script src="js/06-combat/projectiles.js"></script>
-  <script src="js/06-combat/monsterKills.js"></script>
-  <script src="js/06-combat/playerFire.js"></script>
-  <script src="js/06-combat/powerLasers.js"></script>
-  <script src="js/07-input/typing.js"></script>
-  <script src="js/07-input/keyboard.js"></script>
-  <script src="js/08-update/timers.js"></script>
-  <script src="js/08-update/simulation.js"></script>
-  <script src="js/09-render/primitives.js"></script>
-  <script src="js/09-render/background.js"></script>
-  <script src="js/09-render/board.js"></script>
-  <script src="js/09-render/monsters.js"></script>
-  <script src="js/09-render/lasers.js"></script>
-  <script src="js/09-render/hud.js"></script>
-  <script src="js/09-render/powerupChoices.js"></script>
-  <script src="js/09-render/overlays.js"></script>
-  <script src="js/09-render/renderLoop.js"></script>
-  <script src="js/main.js"></script>
+    <!-- game canvas -->
+    <main id="game-shell">
+        <canvas id="game" width="1280" height="720"></canvas>
+    </main>
+    <!-- import js code -->
+    <script src="js/foundation.js"></script>
+    <script src="js/words.js"></script>
+    <script src="js/monsters.js"></script>
+    <script src="js/audio.js"></script>
+
+    <script src="js/stage.js"></script>
+    <script src="js/powerups.js"></script>
+    <script src="js/combat.js"></script>
+    <script src="js/input.js"></script>
+    <script src="js/update.js"></script>
+    <script src="js/render.js"></script>
+    <script src="js/main.js"></script>
+
 </body>
 </html>

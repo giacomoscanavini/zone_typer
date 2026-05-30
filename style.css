@@ -1,0 +1,57 @@
+/* colors to use throughout */
+:root{
+    --bg:    #050529;
+    --cyan:  #35eff9;
+    --pink:  #ff38c8;
+    --gold:  #ffd34d;
+    --violet:#8f4dff;
+    --text:  #eafcff;
+}
+
+* { box-sizing: border-box; }
+
+html, 
+body {
+    margin: 0;
+    min-height: 100%;
+    background: 
+        radial-gradient(circle at 50% 0%, rgba(255, 56, 200, 0.18), transparent 28%),
+        radial-gradient(circle at 40% 20%, rgba(53, 246, 255, 0.12), transparent 34%),
+        linear-gradient(180deg, #080622 0%, #060814 54%, #02030a 100%);
+    color: var(--text);
+    font-family: "Trebuchet MS", Arial, Helvetica, sans-serif;
+    overflow: hidden;
+}
+
+body::before {
+    content: "";
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    background:
+        linear-gradient(rgba(255, 255, 255, 0.025) 50%, rgba(0, 0, 0, 0.035) 50%),
+        linear-gradient(90deg, rgba(255, 56, 200, 0.03), rgba(53, 246, 255, 0.025));
+    background-size: 100% 4px, 100% 100%;
+    mix-blend-mode: screen;
+}
+
+#game-shell {
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 10px;
+}
+
+/* game area */
+#game {
+    width: min(100vw - 20px, 1280px);
+    height: auto;
+    border: 2px solid rgba(53, 246, 255, 0.8);
+    border-radius: 12px;
+    background: #060620;
+    box-shadow:
+        0 0 18px rgba(53, 246, 255, 0.5),
+        0 0 48px rgba(255, 56, 200, 0.24),
+        inset 0 0 22px rgba(53, 255, 93, 0.12);
+}
