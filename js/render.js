@@ -556,7 +556,7 @@ function drawOverlay() {
     ctx.fillStyle = 'rgba(3, 3, 12, 0.82)';
     ctx.fillRect(0, 0, WIDTH, HEIGHT);
     drawPanel(WIDTH / 2 - 310, 138, 620, 356, '#ff38c8');
-    drawNeonText('ZONE TYPER', WIDTH / 2, 202, 56, 'center', '#ff38c8', 22);
+    drawNeonText('ZONE TYPER', WIDTH / 2, 202, 56, 'center', '#ff00fb', 24);
     drawNeonText('Arcade Defense', WIDTH / 2, 252, 25, 'center', '#35f6ff', 16);
     drawNeonText('Type the word in a lane to fire in that lane', WIDTH / 2, 318, 22, 'center', '#ffd000', 8);
     drawNeonText('Stop monsters before they breach your zone', WIDTH / 2, 354, 22, 'center', '#eafcff', 8);
