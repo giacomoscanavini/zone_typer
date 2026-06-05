@@ -1,11 +1,15 @@
 # Zone Typer
 
 Zone Typer is a web-native typing defense game born during the 2026 Tencent Cloud Day Hackathon in Hong Kong
+
 The concept of the game is relatively simple, the player has to protect their zone before it is breached by monsters approaching it
+
 By typing correctly the random words in each lane, the player can shoot projectiles at the monsters gaining points and increasing their score multiplicator
+
 Clearing a stage allows the player to gain up to three power-ups to fight the waves
 
 This project was born in a hackathon so it is intentionally lightweight
+
 The game runs directly in the browser through an HTML file, but it is entirely built in JavaScript
 
 ## How to Play
@@ -40,6 +44,7 @@ zone_typer/
 ## Development Background
 
 The original game design, monster properties, power-up, and basic mechanics were built during the hackathon
+
 The graphical and sound components were largely enhanced with the help of AI
 
 1. The game is created with HTML, CSS, and JavaScript. The reasons for these tools are two: I don't have much experience coding games and since I have worked with websites before these are the tools I knew could do the job. The game can this way be played instantly in the browser
@@ -70,7 +75,7 @@ The graphical and sound components were largely enhanced with the help of AI
             - Draws objects at their current location (whether they moved or not)
 
 4. Combat. `input.js` builds a temporary input string based on what the player types, if the input string is a valid prefix of any lane word or power-up. findCompletedLane() finds the matching lane and 
-fireLaser(completedLane) shoots a laser projectile a laser projectile.
+fireLaser(completedLane) shoots a laser projectile.
 
 5. Losing the game. The game checks the monsters' positions to see if they have reached GAME.protectedZoneX, if so sets GAME.gameOver = true
 
