@@ -14,10 +14,10 @@ The game runs directly in the browser through an HTML file, but it is entirely b
 
 ## How to Play
 The game only requires the keyboard to play:
-1. Press `Enter` to start a new game
-2. Type the words in a specific lane
-3. Select a power-up at each stage clear by pressing `1`, `2`, or `3`
-4. Use owned power-ups by typing their keywords
+1. Press `Enter` to start or restart a new game
+2. Type the word in a specific lane to fire
+3. Select a power-up at each cleared stage by pressing `1`, `2`, or `3`
+4. Use owned power-ups at any time by typing their keywords
 
 ## Project Structure
 ```text
